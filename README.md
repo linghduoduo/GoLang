@@ -1,5 +1,4 @@
-# GoLang
-
+### GoLang
 Imports are just that: they import code and give you access to identifiers such as types, functions, constants, and interfaces. In our case, the code in the main.go code file can now reference the Run function from the search package, thanks to the import on line 08. On lines 04 and 05, we import code from the standard library for the log and os packages.
 
 Here you see the use of the short variable declaration operator (:=). This operator is used to both declare and initialize variables at the same time. The type of each value being returned is used by the compiler to determine the type for each variable, respectively. The short variable declaration operator is just a shortcut to streamline your code and make the code more readable. The variable it declares is no different than any other variable you may declare when using the keyword var.
@@ -252,5 +251,199 @@ Unlike when you call methods directly from values and pointers, when you call a 
 43 }
 ```
 
+The structure of the RSS matcher is similar to the structure of the default matcher. It’s the implementation of the interface method Search that’s different and in the end gives each matcher its uniqueness.
 
+```
+-- Expected RSS feed document
+<rss xmlns:npr="http://www.npr.org/rss/" xmlns:nprml="http://api
+    <channel>
+        <title>News</title>
+        <link>...</link>
+        <description>...</description>
+
+        <language>en</language>
+        <copyright>Copyright 2014 NPR - For Personal Use
+        <image>...</image>
+        <item>
+            <title>
+                Putin Says He'll Respect Ukraine Vote But U.S.
+            </title>
+            <description>
+                The White House and State Department have called on the
+            </description>
+```
+
+Decoding XML is identical to how we decoded JSON in the feed.go code file.
+
+```
+-- matchers/rss.go
+01 package matchers
+02
+03 import (
+04     "encoding/xml"
+05     "errors"
+06     "fmt"
+07     "log"
+08     "net/http"
+09     "regexp"
+10
+11     "github.com/goinaction/code/chapter2/sample/search"
+12 )
+
+14 type (
+15     // item defines the fields associated with the item tag
+16     // in the rss document.
+17     item struct {
+18         XMLName     xml.Name `xml:"item"`
+19         PubDate     string   `xml:"pubDate"`
+20         Title       string   `xml:"title"`
+21         Description string   `xml:"description"`
+
+22         Link        string   `xml:"link"`
+23         GUID        string   `xml:"guid"`
+24         GeoRssPoint string   `xml:"georss:point"`
+25     }
+26
+27     // image defines the fields associated with the image tag
+28     // in the rss document.
+29     image struct {
+30         XMLName xml.Name `xml:"image"`
+31         URL     string   `xml:"url"`
+32         Title   string   `xml:"title"`
+33         Link    string   `xml:"link"`
+34     }
+35
+36     // channel defines the fields associated with the channel tag
+37     // in the rss document.
+38     channel struct {
+39         XMLName        xml.Name `xml:"channel"`
+40         Title          string   `xml:"title"`
+41         Description    string   `xml:"description"`
+42         Link           string   `xml:"link"`
+43         PubDate        string   `xml:"pubDate"`
+44         LastBuildDate  string   `xml:"lastBuildDate"`
+45         TTL            string   `xml:"ttl"`
+46         Language       string   `xml:"language"`
+47         ManagingEditor string   `xml:"managingEditor"`
+48         WebMaster      string   `xml:"webMaster"`
+49         Image          image    `xml:"image"`
+50         Item           []item   `xml:"item"`
+51    }
+52
+53    // rssDocument defines the fields associated with the rss document
+54    rssDocument struct {
+55         XMLName xml.Name `xml:"rss"`
+56         Channel channel  `xml:"channel"`
+57    }
+58 )
+
+60 // rssMatcher implements the Matcher interface.
+61 type rssMatcher struct{}
+
+63 // init registers the matcher with the program.
+64 func init() {
+65     var matcher rssMatcher
+66     search.Register("rss", matcher)
+67 }
+```
+
+The unexported method retrieve performs the logic for pulling the RSS document from the web for each individual feed link. On line 121 you can see the use of the Get method from the http package.
+
+```
+-- matchers/rss.go
+114 // retrieve performs a HTTP Get request for the rss feed and decodes
+115 func (m rssMatcher) retrieve(feed *search.Feed)
+                                                 (*rssDocument, error) {
+116     if feed.URI == "" {
+117         return nil, errors.New("No rss feed URI provided")
+118     }
+119
+120     // Retrieve the rss feed document from the web.
+121     resp, err := http.Get(feed.URI)
+122     if err != nil {
+123         return nil, err
+124     }
+125
+126     // Close the response once we return from the function.
+127     defer resp.Body.Close()
+128
+129     // Check the status code for a 200 so we know we have received a
+130     // proper response.
+131     if resp.StatusCode != 200 {
+132         return nil, fmt.Errorf("HTTP Response Error %d\n",
+                                                        resp.StatusCode)
+133     }
+134
+135     // Decode the rss feed document into our struct type.
+
+136     // We don't need to check for errors, the caller can do this.
+137     var document rssDocument
+138     err = xml.NewDecoder(resp.Body).Decode(&document)
+139     return &document, err
+140 }
+```
+
+
+```
+matchers/rss.go
+ 69 // Search looks at the document for the specified search term.
+ 70 func (m rssMatcher) Search(feed *search.Feed, searchTerm string)
+                                            ([]*search.Result, error) {
+ 71     var results []*search.Result
+ 72
+ 73     log.Printf("Search Feed Type[%s] Site[%s] For Uri[%s]\n",
+                                        feed.Type, feed.Name, feed.URI)
+ 74
+ 75     // Retrieve the data to search.
+ 76     document, err := m.retrieve(feed)
+ 77     if err != nil {
+ 78         return nil, err
+ 79     }
+ 80
+ 81     for _, channelItem := range document.Channel.Item {
+ 82         // Check the title for the search term.
+ 83         matched, err := regexp.MatchString(searchTerm,
+                                                     channelItem.Title)
+ 84         if err != nil {
+ 85             return nil, err
+ 86         }
+ 87
+ 88         // If we found a match save the result.
+ 89         if matched {
+ 90            results = append(results, &search.Result{
+ 91                Field:   "Title",
+ 92                Content: channelItem.Title,
+
+ 93            })
+ 94         }
+ 95
+ 96         // Check the description for the search term.
+ 97         matched, err = regexp.MatchString(searchTerm,
+                                               channelItem.Description)
+ 98         if err != nil {
+ 99             return nil, err
+100         }
+101
+102         // If we found a match save the result.
+103         if matched {
+104             results = append(results, &search.Result{
+105                 Field:   "Description",
+106                 Content: channelItem.Description,
+107             })
+108         }
+109     }
+110
+111     return results, nil
+112 }
+```
+
+#### 2.5. SUMMARY
+
+- Every code file belongs to a package, and that package name should be the same as the folder the code file exists in.
+- Go provides several ways to declare and initialize variables. If the value of a variable isn’t explicitly initialized, the compiler will initialize the variable to its zero value.
+- Pointers are a way of sharing data across functions and goroutines.
+- Concurrency and synchronization are accomplished by launching goroutines and using channels.
+- Go provides built-in functions to support using Go’s internal data structures.
+- The standard library contains many packages that will let you do some powerful things.
+- Interfaces in Go allow you to write generic code and frameworks.
 
