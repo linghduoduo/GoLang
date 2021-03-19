@@ -4,3 +4,253 @@ Imports are just that: they import code and give you access to identifiers such 
 
 Here you see the use of the short variable declaration operator (:=). This operator is used to both declare and initialize variables at the same time. The type of each value being returned is used by the compiler to determine the type for each variable, respectively. The short variable declaration operator is just a shortcut to streamline your code and make the code more readable. The variable it declares is no different than any other variable you may declare when using the keyword var.
 
+```
+package search
+
+// import from the standard library
+import (
+     "log"
+     "sync"
+)
+
+ // A map of registered matchers for searching.
+ var matchers = make(map[string]Matcher)
+ 
+ // The compiler will always look for the packages you import at the locations referenced by the  GOROOT and GOPATH environment variables.
+ GOROOT="/Users/me/go"
+ GOPATH="/Users/me/spaces/go/projects"
+ 
+ // A map of registered matchers for searching.This variable is located outside the scope of any function and so is considered a package-level variable. The variable is declared using the keyword var and is declared as a map of Matcher type values with a key of type string. The declaration for the Matcher type can be found in the match.go code file. This variable declaration also contains an initialization of the variable via the assignment operator and a special built-in function called make.
+ var matchers = make(map[string]Matcher)
+ 
+```
+
+In Go, identifiers are either exported or unexported from a package. An exported identifier can be directly accessed by code in other packages when the respective package is imported. These identifiers start with a capital letter. Unexported identifiers start with a lowercase letter and can’t be directly accessed by code in other packages. But just because an identifier is unexported, it doesn’t mean other packages can’t indirectly access these identifiers. As an example, a function can return a value of an unexported type and this value is accessible by any calling function, even if the calling function has been declared in a different package.
+
+In Go, all variables are initialized to their zero value. For numeric types, that value is 0; for strings it’s an empty string; for Booleans it’s false; and for pointers, the zero value is nil. When it comes to reference types, there are underlying data structures that are initialized to their zero values. But variables declared as a reference type set to their zero value will return the value of nil.
+
+To declare a function in Go, use the keyword func followed by the function name, any parameters, and then any return values. 
+
+Though not unique to Go, you can see that our functions can have multiple return values. It’s common to declare functions that return a value and an error value just like the RetrieveFeeds function. If an error occurs, never trust the other values being returned from the function. They should always be ignored, or else you run the risk of the code generating more errors or panics.
+
+Here you see the use of the short variable declaration operator (:=). This operator is used to both declare and initialize variables at the same time. The type of each value being returned is used by the compiler to determine the type for each variable, respectively. The short variable declaration operator is just a shortcut to streamline your code and make the code more readable. The variable it declares is no different than any other variable you may declare when using the keyword var.
+
+On line 20, we use the built-in function make to create an unbuffered channel. We use the short variable declaration operator to declare and initialize the channel variable with the call to make. A good rule of thumb when declaring variables is to use the keyword var when declaring variables that will be initialized to their zero value, and to use the short variable declaration operator when you’re providing extra initialization or making a function call.
+
+Channels are also a reference type in Go like maps and slices, but channels implement a queue of typed values that are used to communicate data between goroutines. Channels provide inherent synchronization mechanisms to make communication safe. 
+
+In Go, once the main function returns, the program terminates. Any goroutines that were launched and are still running at this time will also be terminated by the Go runtime. When you write concurrent programs, it’s best to cleanly terminate any goroutines that were launched prior to letting the main function return. Writing programs that can cleanly start and shut down helps reduce bugs and prevents resources from corruption.
+
+A *goroutine* is a function that’s launched to run independently from other functions in the program. Use the keyword go to launch and schedule goroutines to run concurrently. An *anonymous function* is a function that’s declared without a name. In our for range loop, we launch an anonymous function as a goroutine for each feed. This allows each feed to be processed independently in a concurrent fashion.
+
+Anonymous functions can take parameters, which we declare for this anonymous function. On line 38 we declare the anonymous function to accept a value of type Matcher and the address of a value of type Feed. This means the variable feed is a *pointer variable*. Pointer variables are great for sharing variables between functions. They allow functions to access and change the state of a variable that was declared within the scope of a different function and possibly a different goroutine.
+
+In Go, all variables are passed by value. Since the value of a pointer variable is the address to the memory being pointed to, passing pointer variables between functions is still considered a pass by value. Thanks to closures, the function can access those variables directly without the need to pass them in as parameters. The anonymous function isn’t given a copy of these variables; it has direct access to the same variables declared in the scope of the outer function. This is the reason why we don’t use closures for the matcher and feed variables.
+
+```
+// Run performs the search logic.
+12 func Run(searchTerm string) {
+13     // Retrieve the list of feeds to search through.
+
+14     feeds, err := RetrieveFeeds()
+15     if err != nil {
+16         log.Fatal(err)
+17     }
+
+18
+19     // Create a unbuffered channel to receive match results.
+20     results := make(chan *Result)
+21
+22     // Setup a wait group so we can process all the feeds.
+23     var waitGroup sync.WaitGroup
+24
+25     // Set the number of goroutines we need to wait for while
+26     // they process the individual feeds.
+27     waitGroup.Add(len(feeds))
+28
+
+29     // Launch a goroutine for each feed to find the results.
+30     for _, feed := range feeds {
+31         // Retrieve a matcher for the search.
+32         matcher, exists := matchers[feed.Type]
+33         if !exists {
+34             matcher = matchers["default"]
+35         }
+36
+37         // Launch the goroutine to perform the search.
+38         go func(matcher Matcher, feed *Feed) {
+39             Match(matcher, feed, searchTerm, results)
+40             waitGroup.Done()
+41         }(matcher, feed)
+42     }
+43
+44     // Launch a goroutine to monitor when all the work is done.
+45     go func() {
+46         // Wait for everything to be processed.
+47         waitGroup.Wait()
+48
+49         // Close the channel to signal to the Display
+50         // function that we can exit the program.
+51         close(results)
+52     }()
+53
+54     // Start displaying results as they are available and
+55     // return after the final result is displayed.
+56     Display(results)
+57 }
+```
+
+
+```
+01 package search
+02
+03 import (
+04     "encoding/json"
+05     "os"
+06 )
+07
+08 const dataFile = "data/data.json"
+```
+
+```
+--- data/data.json
+[
+    {
+        "site" : "npr",
+        "link" : "http://www.npr.org/rss/rss.php?id=1001",
+        "type" : "rss"
+    },
+    {
+        "site" : "cnn",
+        "link" : "http://rss.cnn.com/rss/cnn_world.rss",
+        "type" : "rss"
+    },
+    {
+        "site" : "foxnews",
+        "link" : "http://feeds.foxnews.com/foxnews/world?format=xml",
+        "type" : "rss"
+    },
+    {
+        "site" : "nbcnews",
+        "link" : "http://feeds.nbcnews.com/feeds/topstories",
+        "type" : "rss"
+    }
+]
+```
+
+These documents need to be decoded into a slice of struct types so we can use this data in our program. Let’s look at the struct type that will be used to decode this data file.
+
+```
+10 // Feed contains information we need to process a feed.
+11 type Feed struct {
+12     Name string `json:"site"`
+
+13     URI  string `json:"link"`
+14     Type string `json:"type"`
+15 }
+
+17 // RetrieveFeeds reads and unmarshals the feed data file.
+18 func RetrieveFeeds() ([]*Feed, error) {
+19    // Open the file.
+20    file, err := os.Open(dataFile)
+21    if err != nil {
+22        return nil, err
+23    }
+24
+25    // Schedule the file to be closed once
+26    // the function returns.
+27    defer file.Close()
+28
+29    // Decode the file into a slice of pointers
+30    // to Feed values.
+31    var feeds []*Feed
+32    err = json.NewDecoder(file).Decode(&feeds)
+33
+34    // We don't need to check for errors, the caller can do this.
+35    return feeds, err
+36 }
+```
+
+The keyword defer is used to schedule a function call to be executed right after a function returns. It’s our responsibility to close the file once we’re done with it. By using the keyword defer to schedule the call to the close method, we can guarantee that the method will be called. This will happen even if the function panics and terminates unexpectedly. The keyword defer lets us write this statement close to where the opening of the file occurs, which helps with readability and reducing bugs.
+
+The key to making this code work is the ability of this framework code to use an interface type to capture and call into the specific implementation for each matcher value. This allows the code to handle different types of matcher values in a consistent and generic way. 
+
+search/match.go
+
+```
+01 package search
+02
+03 import (
+04     "log"
+05 )
+06
+07 // Result contains the result of a search.
+08 type Result struct {
+09     Field   string
+10     Content string
+11 }
+12
+
+13 // Matcher defines the behavior required by types that want
+14 // to implement a new search type.
+15 type Matcher interface {
+16     Search(feed *Feed, searchTerm string) ([]*Result, error)
+17 }
+```
+
+search/default.go
+
+```
+01 package search
+02
+03 // defaultMatcher implements the default matcher.
+04 type defaultMatcher struct{}
+05
+06 // init registers the default matcher with the program.
+07 func init() {
+08     var matcher defaultMatcher
+09     Register("default", matcher)
+10 }
+11
+12 // Search implements the behavior for the default matcher.
+13 func (m defaultMatcher) Search(feed *Feed, searchTerm string)
+                                                   ([]*Result, error) {
+14     return nil, nil
+15 }
+```
+
+An empty struct allocates zero bytes when values of this type are created. They’re great when you need a type but not any state. For the default matcher, we don’t need to maintain any state; we only need to implement the interface.
+
+Unlike when you call methods directly from values and pointers, when you call a method via an interface type value, the rules are different. Methods declared with pointer receivers can only be called by interface type values that contain pointers. Methods declared with value receivers can be called by interface type values that contain both values and pointers.
+
+```
+19 // Match is launched as a goroutine for each individual feed to run
+20 // searches concurrently.
+21 func Match(matcher Matcher, feed *Feed, searchTerm string,
+                                              results chan<- *Result) {
+22     // Perform the search against the specified matcher.
+23     searchResults, err := matcher.Search(feed, searchTerm)
+24     if err != nil {
+25         log.Println(err)
+26         return
+27     }
+28
+29     // Write the results to the channel.
+30     for _, result := range searchResults {
+31         results <- result
+32     }
+33 }
+
+35 // Display writes results to the terminal window as they
+36 // are received by the individual goroutines.
+37 func Display(results chan *Result) {
+38     // The channel blocks until a result is written to the channel.
+39     // Once the channel is closed the for loop terminates.
+40     for result := range results {
+41         fmt.Printf("%s:\n%s\n\n", result.Field, result.Content)
+42     }
+43 }
+```
+
+
+
