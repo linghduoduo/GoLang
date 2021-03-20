@@ -5,7 +5,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 )
+
+
+// CountWords counts the number of words in the specified
+// string and returns the count.
+func CountWords(text string) (count int) {
+	count = len(strings.Fields(text))
+	return
+}
+
 
 // main is the entry point for the application.
 func main() {
@@ -19,6 +29,6 @@ func main() {
 
 	text := string(contents)
 
-	count := words.CountWords(text)
+	count := CountWords(text)
 	fmt.Printf("There are %d words in your text. \n", count)
 }
