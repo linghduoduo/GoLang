@@ -1,4 +1,3 @@
-### GoLang
 Imports are just that: they import code and give you access to identifiers such as types, functions, constants, and interfaces. In our case, the code in the main.go code file can now reference the Run function from the search package, thanks to the import on line 08. On lines 04 and 05, we import code from the standard library for the log and os packages.
 
 Here you see the use of the short variable declaration operator (:=). This operator is used to both declare and initialize variables at the same time. The type of each value being returned is used by the compiler to determine the type for each variable, respectively. The short variable declaration operator is just a shortcut to streamline your code and make the code more readable. The variable it declares is no different than any other variable you may declare when using the keyword var.
@@ -446,4 +445,104 @@ matchers/rss.go
 - Go provides built-in functions to support using Go’s internal data structures.
 - The standard library contains many packages that will let you do some powerful things.
 - Interfaces in Go allow you to write generic code and frameworks.
+
+**Packages**
+
+All Go programs are organized into groups of files called *packages*, so that code has the ability to be included into other projects as smaller reusable pieces. Each package can be imported and used individually so that developers can import only the specific functionality that they need. This means that all .go files in a single directory must declare the same package name.
+
+```
+net/http/
+    cgi/
+    cookiejar/
+        testdata/
+    fcgi/
+    httptest/
+    httputil/
+    pprof/
+    testdata/
+```
+
+The package name main has special meaning in Go. It designates to the Go command that this package is intended to be compiled into a binary executable. All of the executable programs you build in Go must have a package called main.
+
+When the main package is encountered by the compiler, it must also find a function called main(); otherwise a binary executable won’t be created. The main() function is the entry point for the program, so without one, the program has no starting point. The name of the final binary will take the name of the directory the main package is declared in.
+
+The Go documentation uses the term *command* frequently to refer to an executable program—like a command-line application. Remember that in Go, a command is any executable program, in contrast to a package, which generally means an importable semantic unit of functionality.
+
+**Imports**
+
+ The import statement tells the compiler where to look on disk to find the package you want to import. Packages are found on disk based on their relative path to the directories referenced by the Go environment. Packages in the standard library are found under where Go is installed on your computer. Packages that are created by you or other Go developers live inside the GOPATH, which is your own personal workspace for packages.
+
+When an import path contains a URL, the Go tooling can be used to fetch the package from the DVCS and place the code inside the GOPATH at the location that matches the URL. This fetching is done using the go get command. go get will fetch any specified URL or can be used to fetch the dependencies a package is importing that are go-gettable. Since go get is recursive, it can walk down the source tree for a package and fetch all the dependencies it finds.
+
+The _ (underscore character) is known as the *blank identifier* and has many uses within Go. It’s used when you want to throw away the assignment of a value, including the assignment of an import to its package name, or ignore return values from a function when you’re only interested in the others.
+
+**Init**
+
+Each package has the ability to provide as many init functions as necessary to be invoked at the beginning of execution time. All the init functions that are discovered by the compiler are scheduled to be executed prior to the main function being executed. The init functions are great for setting up packages, initializing variables, or performing any other bootstrapping you may need prior to the program running.
+
+```
+// Sample program to show how to show you how to briefly work
+// with the sql package.
+package main
+
+import (
+	"database/sql"
+
+	_ "github.com/goinaction/code/chapter3/dbdriver/postgres"
+)
+
+// main is the entry point for the application.
+func main() {
+	sql.Open("postgres", "mydb")
+}
+```
+
+Go tools
+
+```go build hello.go
+go build hello.go
+
+go clean hello.go
+
+go run wordcount.go
+
+go vet wordcount.go
+
+go fmt wordcount.go
+
+go doc tar
+```
+
+Go vet for styling errors:
+
+- Bad parameters in Printf-style function calls
+- Method signature errors for common method definitions
+- Bad struct tags
+- Unkeyed composite literals
+
+Browsing the documentation
+
+```
+godoc -http=:6060
+```
+
+Once you start cranking out awesome Go code, you’re probably going to want to share that code with the rest of the Go community. It’s really easy as long as you follow a few simple steps.
+
+**Package should live at the root of the repository**
+
+When you’re using go get, you specify the full path to the package that should be imported. This means that when you create a repository that you intend to share, the package name should be the repository name, and the package’s source should be in the root of the repository’s directory structure.
+
+A common mistake that new Go developers make is to create a code or src directory in their public repository. Doing so will make the package’s public import longer. Instead, just put the package source files at the root of the public repository.
+
+**Packages can be small**
+
+It’s common in Go to see packages that are relatively small by the standards of other programming languages. Don’t be afraid to make a package that has a small API or performs only a single task. That’s normal and expected.
+
+**Run go fmt on the code**
+
+Just like any other open source repository, people will look at your code to gauge the quality of it before they try it out. You need to be running go fmt before checking anything in. It makes your code readable and puts everyone on the same page when reading source code.
+
+**Document the code**
+
+Go developers use godoc to read documentation, and [http://godoc.org](http://godoc.org/) to read documentation for open source packages. If you’ve followed go doc best practices in documenting your code, your packages will appear well documented when viewed locally or online, and people will find it easier to use.
 
