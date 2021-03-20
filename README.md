@@ -526,6 +526,8 @@ Browsing the documentation
 godoc -http=:6060
 ```
 
+This command instructs godoc to start a web server on port 6060. If you open your web browser and navigate to http://localhost:6060, you’ll see a web page with documentation for both the Go standard libraries and any Go source that lives in your GOPATH.
+
 Once you start cranking out awesome Go code, you’re probably going to want to share that code with the rest of the Go community. It’s really easy as long as you follow a few simple steps.
 
 **Package should live at the root of the repository**
@@ -546,3 +548,40 @@ Just like any other open source repository, people will look at your code to gau
 
 Go developers use godoc to read documentation, and [http://godoc.org](http://godoc.org/) to read documentation for open source packages. If you’ve followed go doc best practices in documenting your code, your packages will appear well documented when viewed locally or online, and people will find it easier to use.
 
+**Dependency**
+
+**Vendoring dependencies**
+
+Community tools such as godep and vendor have solved the dependency problem by using a technique called *vendoring* and import path rewriting. The idea is to copy all the dependencies into a directory inside the project repo, and then rewrite any import paths that reference those dependencies by providing the location inside the project itself.
+
+Before the dependencies were vendored, the import statements used the canonical path for the package. The code was physically located on disk within the scope of GOPATH. After vendoring, import path rewriting became necessary to reference the packages, which are now physically located on disk inside the project itself. You can see these imports are very large and tedious to use.
+
+With vendoring, you have the ability to create reproducible builds, since all the source code required to build the binary is housed inside the single project repo. One other benefit of vendoring and import path rewriting is that the project repo is still go-gettable. When go get is called against the project repo, the tooling can find each package and store the package exactly where it needs to be inside the project itself.
+
+**Gb**
+
+The philosophy behind gb stems from the idea that Go doesn’t have reproducible builds because of the import statement. The import statement drives go get, but import doesn’t contain sufficient information to identify which revision of a package should be fetched any time go get is called. The possibility that go get can fetch a different version of code for any given package at any time makes supporting the Go tooling in any reproducible solution complicated and tedious at best. You saw some of this tediousness with the large import paths when using godep.
+
+Gb doesn’t wrap the Go tooling, nor does it use GOPATH. Gb replaces the Go tooling workspace metaphor with a project-based approach. This has natively allowed vendoring without the need for rewriting import paths, which is mandated by go get and a GOPATH workspace.
+
+Gb projects differentiate between the code you write and the code your code depends on. The code your code depends on is called *vendored code*. A gb project makes a clear distinction between your code and vendored code.
+
+One of the best things about gb is that there’s no need for import path rewriting. Look at the import statements that are declared inside of main.go—nothing needs to change to reference the vendored dependencies.
+
+The gb tool will look inside the ```$PROJECT/vendor/src/``` directory for these imports if they can’t be located inside the $PROJECT/src/ directory first. The entire source code for the project is located within a single repo and directory on disk, split between the src/ and vendor/src/ subdirectories. This, in conjunction with no need to rewrite import paths and the freedom to place your project anywhere you wish on disk, makes gb a popular tool in the community to develop projects that require reproducible builds.
+
+One thing to note: a gb project is not compatible with the Go tooling, including go get. Since there’s no need for GOPATH, and the Go tooling doesn’t understand the structure of a gb project, it can’t be used to build, test, or get. Building and testing a gb project requires navigating to the $PROJECT directory and using the gb tool.
+
+Many of the same features that are supported by the Go tooling are supported in gb. Gb also has a plugin system to allow the community to extend support. One such plugin is called vendor, which provides conveniences to manage the dependencies in the ```$PROJECT/vendor/src/ directory```, something the Go tooling does not have today. To learn more about gb, check out the website: getgb.io.
+
+#### 3.8. SUMMARY
+
+- Packages are the basic unit of code organization in Go.
+- Your GOPATH determines on disk where Go source code is saved, compiled, and installed.
+- You can set your GOPATH for each different project, keeping all of your source and dependencies separate.
+- The go tool is your best friend when working from the command line.
+- You can use packages created by other people by using go get to fetch and install them in your GOPATH.
+- It’s easy to create packages for others to use if you host them on a public source code repository and follow a few simple rules.
+- Go was designed with code sharing as a central driving feature of the language.
+- It’s recommended that you use vendoring to manage dependencies.
+- There are several community-developed tools for dependency management such as godep, vendor, and gb.
