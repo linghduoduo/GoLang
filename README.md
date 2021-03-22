@@ -585,3 +585,379 @@ Many of the same features that are supported by the Go tooling are supported in 
 - Go was designed with code sharing as a central driving feature of the language.
 - It’s recommended that you use vendoring to manage dependencies.
 - There are several community-developed tools for dependency management such as godep, vendor, and gb.
+
+**Array intervals and Fundamentals**
+
+An array in Go is a fixed-length data type that contains a contiguous block of elements of the same type. This could be a built-in type such as integers and strings, or it can be a struct type. Arrays are valuable data structures because the memory is allocated sequentially. Having memory in a contiguous form can help to keep the memory you use stay loaded within CPU caches longer. Using index arithmetic, you can iterate through all the elements of an array quickly. The type information for the array provides the distance in memory you have to move to find each element. Since each element is of the same type and follows each other sequentially, moving through the array is consistent and fast.
+
+Once an array is declared, neither the type of data being stored nor its length can be changed. If you need more elements, you need to create a new array with the length needed and then copy the values from one array to the other.
+
+If the length is given as ..., Go will identify the length of the array based on the number of elements that are initialized.
+
+You can have an array of pointers, you use the * operator to access the value that each element pointer points to.
+
+An array is a value in Go. This means you can use it in an assignment operation. The variable name denotes the entire array and, therefore, an array can be assigned to other arrays of the same type.
+
+```
+-- 4.1. Declaring an array set to its zero value
+// Declare an integer array of five elements.
+var array [5]int
+
+-- 4.2. Declaring an array using an array literal
+// Declare an integer array of five elements.
+// Initialize each element with a specific value.
+array := [5]int{10, 20, 30, 40, 50}
+
+
+-- 4.3. Declaring an array with Go calculating size
+// Declare an integer array.
+// Initialize each element with a specific value.
+// Capacity is determined based on the number of values initialized.
+array := [...]int{10, 20, 30, 40, 50}
+
+- 4.4. Declaring an array initializing specific elements
+// Declare an integer array of five elements.
+// Initialize index 1 and 2 with specific values.
+// The rest of the elements contain their zero value.
+array := [5]int{1: 10, 2: 20}
+
+-- 4.5. Accessing array elements
+// Declare an integer array of five elements.
+// Initialize each element with a specific value.
+array := [5]int{10, 20, 30, 40, 50}
+
+
+// Change the value at index 2.
+array[2] = 35
+
+-- 4.6. Accessing array pointer elements
+// Declare an integer pointer array of five elements.
+// Initialize index 0 and 1 of the array with integer pointers.
+array := [5]*int{0: new(int), 1: new(int)}
+
+// Assign values to index 0 and 1.
+*array[0] = 10
+*array[1] = 20
+
+--  4.7. Assigning one array to another of the same type
+// Declare a string array of five elements.
+var array1 [5]string
+
+-- 4.8. Compiler error assigning arrays of different types
+// Declare a string array of four elements.
+var array1 [4]string
+
+// Declare a second string array of five elements.
+// Initialize the array with colors.
+array2 := [5]string{"Red", "Blue", "Green", "Yellow", "Pink"}
+
+// Copy the values from array2 into array1.
+array1 = array2
+
+Compiler Error:
+cannot use array2 (type [5]string) as type [4]string in assignment
+
+-- 4.9. Assigning one array of pointers to another
+// Declare a string pointer array of three elements.
+var array1 [3]*string
+
+// Declare a second string pointer array of three elements.
+// Initialize the array with string pointers.
+array2 := [3]*string{new(string), new(string), new(string)}
+
+// Add colors to each element
+*array2[0] = "Red"
+*array2[1] = "Blue"
+*array2[2] = "Green"
+
+// Copy the values from array2 into array1.
+array1 = array2
+
+-- 4.10. Declaring two-dimensional arrays
+// Declare a two dimensional integer array of four elements
+// by two elements.
+var array [4][2]int
+
+// Use an array literal to declare and initialize a two
+// dimensional integer array.
+array := [4][2]int{{10, 11}, {20, 21}, {30, 31}, {40, 41}}
+
+// Declare and initialize index 1 and 3 of the outer array.
+array := [4][2]int{1: {20, 21}, 3: {40, 41}}
+
+// Declare and initialize individual elements of the outer
+// and inner array.
+array := [4][2]int{1: {0: 20}, 3: {1: 41}}
+
+-- 4.11. Accessing elements of a two-dimensional array
+// Declare a two dimensional integer array of two elements.
+var array [2][2]int
+
+// Set integer values to each individual element.
+array[0][0] = 10
+array[0][1] = 20
+array[1][0] = 30
+array[1][1] = 40
+
+-- 4.12. Assigning multidimensional arrays of the same type
+// Declare two different two dimensional integer arrays.
+var array1 [2][2]int
+var array2 [2][2]int
+
+// Add integer values to each individual element.
+array2[0][0] = 10
+array2[0][1] = 20
+array2[1][0] = 30
+array2[1][1] = 40
+
+// Copy the values from array2 into array1.
+array1 = array2
+
+-- 4.13. Assigning multidimensional arrays by index
+// Copy index 1 of array1 into a new array of the same type.
+var array3 [2]int = array1[1]
+
+// Copy the integer found in index 1 of the outer array
+// and index 0 of the interior array into a new variable of
+// type integer.
+var value int = array1[1][0]
+
+-- 4.14. Passing a large array by value between functions
+// Declare an array of 8 megabytes.
+var array [1e6]int
+
+// Pass the array to the function foo.
+foo(array)
+
+// Function foo accepts an array of one million integers.
+func foo(array [1e6]int) {
+    ...
+}
+
+-- 4.15. Passing a large array by pointer between functions
+// Allocate an array of 8 megabytes.
+var array [1e6]int
+
+// Pass the address of the array to the function foo.
+foo(&array)
+
+// Function foo accepts a pointer to an array of one million integers.
+func foo(array *[1e6]int) {
+    ...
+}
+```
+
+**SLICE INTERNALS AND FUNDAMENTALS**
+
+A *slice* is a data structure that provides a way for you to work with and manage collections of data. Slices are built around the concept of dynamic arrays that can grow and shrink as you see fit. They’re flexible in terms of growth because they have their own built-in function called append, which can grow a slice quickly with efficiency. You can also reduce the size of a slice by slicing out a part of the underlying memory. Slices give you all the benefits of indexing, iteration, and garbage collection optimizations because the underlying memory is allocated in contiguous blocks.
+
+**Internals**
+
+```
+-- 4.16. Declaring a slice of strings by length
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+slice := make([]string, 5)
+
+-- 4.17. Declaring a slice of integers by length and capacity
+// Create a slice of integers.
+// Contains a length of 3 and has a capacity of 5 elements.
+slice := make([]int, 3, 5)
+
+-- 4.18. Compiler error setting capacity less than length
+// Create a slice of integers.
+// Make the length larger than the capacity.
+slice := make([]int, 5, 3)
+
+Compiler Error:
+len larger than cap in make([]int)
+
+-- 4.19. Declaring a slice with a slice literal
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+slice := []string{"Red", "Blue", "Green", "Yellow", "Pink"}
+
+// Create a slice of integers.
+// Contains a length and capacity of 3 elements.
+slice := []int{10, 20, 30}
+
+-- 4.21 Declaration differences between arrays and slices
+// Create an array of three integers.
+array := [3]int{10, 20, 30}
+
+// Create a slice of integers with a length and capacity of three.
+slice := []int{10, 20, 30}
+
+-- 4.22. Declaring a nil slice
+// Create a nil slice of integers.
+var slice []int
+
+-- 4.23. Declaring an empty slice
+// Use make to create an empty slice of integers.
+slice := make([]int, 0)
+
+// Use a slice literal to create an empty slice of integers.
+slice := []int{}
+```
+
+The three fields are a pointer to the underlying array, the length or the number of elements the slice has access to, and the capacity or the number of elements the slice has available for growth. The difference between length and capacity will make more sense in a bit.
+
+When you specify the length and capacity separately, you can create a slice with available capacity in the underlying array that you don’t have access to initially.
+
+ if you specify a value inside the [ ] operator, you’re creating an array. If you don’t specify a value, you’re creating a slice.
+
+Sometimes in your programs you may need to declare a nil slice. A nil slice is created by declaring a slice without any initialization. A nil slice is the most common way you create slices in Go. They can be used with many of the standard library and built-in functions that work with slices. 
+
+An empty slice contains a zero-element underlying array that allocates no storage. Empty slices are useful when you want to represent an empty collection, such as when a database query returns zero results 
+
+```
+-- 4.24. Declaring an array using an array literal
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Change the value of index 1.
+slice[1] = 25
+
+-- 4.25. Taking the slice of a slice
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+-- 4.26. How length and capacity are calculated
+For slice[i:j] with an underlying array of capacity k
+
+Length:   j - i
+Capacity: k - i
+
+-- 4.28. Potential consequence of making changes to a slice
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+// Change index 1 of newSlice.
+// Change index 2 of the original slice.
+newSlice[1] = 35
+
+-- 4.29. Runtime error showing index out of range
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+// Change index 3 of newSlice.
+// This element does not exist for newSlice.
+newSlice[3] = 45
+
+Runtime Exception:
+panic: runtime error: index out of range
+```
+
+Slices are called such because you can slice a portion of the underlying array to create a new slice.
+
+Having capacity is great, but useless if you can’t incorporate it into your slice’s length. Luckily, Go makes this easy when you use the built-in function append. 
+
+One of the advantages of using a slice over using an array is that you can grow the capacity of your slice as needed. Go takes care of all the operational details when you use the built-in function append.
+
+To use append, you need a source slice and a value that is to be appended. When your append call returns, it provides you a new slice with the changes. The append function will always increase the length of the new slice. The capacity, on the other hand, may or may not be affected, depending on the available capacity of the source slice.
+
+When there’s no available capacity in the underlying array for a slice, the append function will create a new underlying array, copy the existing values that are being referenced, and assign the new value.
+
+The append operation is clever when growing the capacity of the underlying array. Capacity is always doubled when the existing capacity of the slice is under 1,000 elements. Once the number of elements goes over 1,000, the capacity is grown by a factor of 1.25, or 25%. This growth algorithm may change in the language over time.
+
+The built-in function append will use any available capacity first. Once that capacity is reached, it will allocate a new underlying array. It’s easy to forget which slices are sharing the same underlying array. When this happens, making changes to a slice can result in random and odd-looking bugs. Suddenly changes appear on multiple slices out of nowhere.
+
+By having the option to set the capacity of a new slice to be the same as the length, you can force the first append operation to detach the new slice from the underlying array. Detaching the new slice from its original source array makes it safe to change.
+
+With the new slice now having its own underlying array, we’ve avoided potential problems. We can now continue to append fruit to our new slice without worrying if we’re changing fruit to other slices inappropriately. Also, allocating the new underlying array for the slice was easy and clean.
+
+There are two special built-in functions called len and cap that work with arrays, slices, and channels. For slices, the len function returns the length of the slice, and the cap function returns the capacity. 
+
+```
+-- 4.30. Using append to add an element to a slice
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+// Allocate a new element from capacity.
+// Assign the value of 60 to the new element.
+newSlice = append(newSlice, 60)
+
+-- 4.31. Using append to increase the length and capacity of a slice
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Append a new value to the slice.
+// Assign the value of 50 to the new element.
+newSlice := append(slice, 50)
+
+-- 4.32. Declaring a slice of string using a slice literal
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+source := []string{"Apple", "Orange", "Plum", "Banana", "Grape"}
+
+-- 4.33. Performing a three-index slice
+// Slice the third element and restrict the capacity.
+// Contains a length of 1 element and capacity of 2 elements.
+slice := source[2:3:4]
+
+-- 4.36. Benefits of setting length and capacity to be the same
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+source := []string{"Apple", "Orange", "Plum", "Banana", "Grape"}
+
+// Slice the third element and restrict the capacity.
+// Contains a length and capacity of 1 element.
+slice := source[2:3:3]
+
+// Append a new string to the slice.
+slice = append(slice, "Kiwi")
+
+-- 4.39. range provides a copy of each element
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Iterate over each element and display the value and addresses.
+for index, value := range slice {
+   fmt.Printf("Value: %d  Value-Addr: %X  ElemAddr: %X\n",
+       value, &value, &slice[index])
+}
+
+-- 4.40. Using the blank identifier to ignore the index value
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Iterate over each element and display each value.
+for _, value := range slice {
+    fmt.Printf("Value: %d\n", value)
+}
+
+-- 4.41. Iterating over a slice using a traditional for loop
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Iterate over each element starting at element 3.
+for index := 2; index < len(slice); index++ {
+    fmt.Printf("Index: %d  Value: %d\n", index, slice[index])
+}
+```
