@@ -960,4 +960,183 @@ slice := []int{10, 20, 30, 40}
 for index := 2; index < len(slice); index++ {
     fmt.Printf("Index: %d  Value: %d\n", index, slice[index])
 }
+
 ```
+
+**Multidimensional slices**
+
+```
+// Create a slice of a slice of integers.
+slice := [][]int{{10}, {100, 200}}
+```
+
+**Passing slices btw functions**
+
+Passing a slice between two functions requires nothing more than passing the slice by value. Since the size of a slice is small, it’s cheap to copy and pass between functions. Let’s create a large slice and pass that slice by value to our function called foo.
+
+Even with this simple multidimensional slice, there are a lot of layers and values involved. Passing a data structure like this between functions could seem complicated. But slices are cheap and passing them between functions is trivial.  This is the beauty of slices. You don’t need to pass pointers around and deal with complicated syntax. You just create copies of your slices, make the changes you need, and then pass a new copy back.
+
+```
+-- 4.43. Composing slices of slices
+// Create a slice of a slice of integers.
+slice := [][]int{{10}, {100, 200}}
+
+// Append the value of 20 to the first slice of integers.
+slice[0] = append(slice[0], 20)
+
+-- 4.44. Passing slices between functions
+// Allocate a slice of 1 million integers.
+slice := make([]int, 1e6)
+
+// Pass the slice to the function foo.
+slice = foo(slice)
+
+// Function foo accepts a slice of integers and returns the slice back.
+func foo(slice []int) []int {
+    ...
+    return slice
+}
+```
+
+**Map Internals and Fundamentals**
+
+A map is a data structure that provides you with an unordered collection of key/value pairs. You store values into the map based on a key. The strength of a map is its ability to retrieve data quickly based on the key. A key works like an index, pointing to the value you associate with that key.
+
+**Internals**
+
+Maps are collections, and you can iterate over them just like you do with arrays and slices. But maps are *unordered* collections, and there’s no way to predict the order in which the key/value pairs will be returned. Even if you store your key/value pairs in the same order, every iteration over a map could return a different order. This is because a map is implemented using a hash table.
+
+The map’s hash table contains a collection of buckets. When you’re storing, removing, or looking up a key/value pair, everything starts with selecting a bucket. This is performed by passing the key—specified in your map operation—to the map’s hash function. The purpose of the hash function is to generate an index that evenly distributes key/value pairs across all available buckets.
+
+The better the distribution, the quicker you can find your key/value pairs as the map grows. The strings are converted into a numeric value within the scope of the number of buckets we have available for storage. The numeric value is then used to select a bucket for storing or finding the specific key/value pair. In the case of a Go map, a portion of the generated hash key, specifically the *low order bits* (LOB), is used to select the bucket.
+
+There are two data structures that contain the data for the map. First, there’s an array with the top eight *high order bits* (HOB) from the same hash key that was used to select the bucket. This array distinguishes each individual key/value pair stored in the respective bucket. Second, there’s an array of bytes that stores the key/value pairs. The byte array packs all the keys and then all the values together for the respective bucket. The packing of the key/value pairs is implemented to minimize the memory required for each bucket.
+
+There are a lot of other low-level implementation details about maps that are outside the scope of this chapter. You don’t need to understand all the internals to learn how to create and use maps.  A map is an unordered collection of key/value pairs.
+
+```
+-- 4.45. Declaring a map using make
+// Create a map with a key of type string and a value of type int.
+dict := make(map[string]int)
+
+// Create a map with a key and value of type string.
+// Initialize the map with 2 key/value pairs.
+dict := map[string]string{"Red": "#da1337", "Orange": "#e95a22"}
+
+-- 4.46. Declaring an empty map using a map literal
+// Create a map using a slice of strings as the key.
+dict := map[[]string]int{}
+
+Compiler Exception:
+invalid map key type []string
+
+-- 4.47. Declaring a map that stores slices of strings
+// Create a map using a slice of strings as the value.
+dict := map[int][]string{}
+
+-- 4.48. Assigning values to a map
+// Create an empty map to store colors and their color codes.
+colors := map[string]string{}
+
+// Add the Red color code to the map.
+colors["Red"] = "#da1337"
+
+-- 4.49. Runtime error assigned to a nil map
+// Create a nil map by just declaring the map.
+var colors map[string]string
+
+// Add the Red color code to the map.
+colors["Red"] = "#da1337"
+
+Runtime Error:
+panic: runtime error: assignment to entry in nil map
+
+-- 4.50. Retrieving a value from a map and testing existence.
+// Retrieve the value for the key "Blue".
+value, exists := colors["Blue"]
+
+// Did this key exist?
+if exists {
+    fmt.Println(value)
+}
+
+-- 4.51. Retrieving a value from a map testing the value for existence
+// Retrieve the value for the key "Blue".
+value := colors["Blue"]
+
+// Did this key exist?
+if value != "" {
+    fmt.Println(value)
+}
+
+-- 4.52. Iterating over a map using for range
+// Create a map of colors and color hex codes.
+colors := map[string]string{
+    "AliceBlue":   "#f0f8ff",
+    "Coral":       "#ff7F50",
+    "DarkGray":    "#a9a9a9",
+    "ForestGreen": "#228b22",
+}
+
+// Display all the colors in the map.
+for key, value := range colors {
+    fmt.Printf("Key: %s  Value: %s\n", key, value)
+}
+
+-- 4.53. Removing an item from a map
+// Remove the key/value pair for the key "Coral".
+delete(colors, "Coral")
+
+// Display all the colors in the map.
+
+for key, value := range colors {
+    fmt.Printf("Key: %s  Value: %s\n", key, value)
+}
+
+-- 4.54. Passing maps between functions
+func main() {
+    // Create a map of colors and color hex codes.
+    colors := map[string]string{
+       "AliceBlue":   "#f0f8ff",
+       "Coral":       "#ff7F50",
+       "DarkGray":    "#a9a9a9",
+       "ForestGreen": "#228b22",
+    }
+
+    // Display all the colors in the map.
+    for key, value := range colors {
+        fmt.Printf("Key: %s  Value: %s\n", key, value)
+    }
+
+    // Call the function to remove the specified key.
+    removeColor(colors, "Coral")
+
+    // Display all the colors in the map.
+    for key, value := range colors {
+        fmt.Printf("Key: %s  Value: %s\n", key, value)
+    }
+}
+
+// removeColor removes keys from the specified map.
+func removeColor(colors map[string]string, key string) {
+    delete(colors, key)
+}
+```
+
+Using a map literal is the idiomatic way of creating a map. The initial length will be based on the number of key/value pairs you specify during initialization.
+
+The map key can be a value from any built-in or struct type as long as the value can be used in an expression with the == operator. Slices, functions, and struct types that contain slices can’t be used as map keys. This will produce a compiler error.
+
+Passing a map between two functions doesn’t make a copy of the map. In fact, you can pass a map to a function and make changes to the map, and the changes will be reflected by all references to the map.
+
+#### 4.4. SUMMARY
+
+- Arrays are the building blocks for both slices and maps.
+- Slices are the idiomatic way in Go you work with collections of data. Maps are the way you work with key/value pairs of data.
+- The built-in function make allows you to create slices and maps with initial length and capacity. Slice and map literals can be used as well and support setting initial values for use.
+- Slices have a capacity restriction, but can be extended using the built-in function append.
+- Maps don’t have a capacity or any restriction on growth.
+- The built-in function len can be used to retrieve the length of a slice or map.
+- The built-in function cap only works on slices.
+- Through the use of composition, you can create multidimensional arrays and slices. You can also create maps with values that are slices and other maps. A slice can’t be used as a map key.
+- Passing a slice or map to a function is cheap and doesn’t make a copy of the underlying data structure.
