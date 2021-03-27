@@ -526,6 +526,8 @@ Browsing the documentation
 godoc -http=:6060
 ```
 
+This command instructs godoc to start a web server on port 6060. If you open your web browser and navigate to http://localhost:6060, you’ll see a web page with documentation for both the Go standard libraries and any Go source that lives in your GOPATH.
+
 Once you start cranking out awesome Go code, you’re probably going to want to share that code with the rest of the Go community. It’s really easy as long as you follow a few simple steps.
 
 **Package should live at the root of the repository**
@@ -545,4 +547,679 @@ Just like any other open source repository, people will look at your code to gau
 **Document the code**
 
 Go developers use godoc to read documentation, and [http://godoc.org](http://godoc.org/) to read documentation for open source packages. If you’ve followed go doc best practices in documenting your code, your packages will appear well documented when viewed locally or online, and people will find it easier to use.
+
+**Dependency**
+
+**Vendoring dependencies**
+
+Community tools such as godep and vendor have solved the dependency problem by using a technique called *vendoring* and import path rewriting. The idea is to copy all the dependencies into a directory inside the project repo, and then rewrite any import paths that reference those dependencies by providing the location inside the project itself.
+
+Before the dependencies were vendored, the import statements used the canonical path for the package. The code was physically located on disk within the scope of GOPATH. After vendoring, import path rewriting became necessary to reference the packages, which are now physically located on disk inside the project itself. You can see these imports are very large and tedious to use.
+
+With vendoring, you have the ability to create reproducible builds, since all the source code required to build the binary is housed inside the single project repo. One other benefit of vendoring and import path rewriting is that the project repo is still go-gettable. When go get is called against the project repo, the tooling can find each package and store the package exactly where it needs to be inside the project itself.
+
+**Gb**
+
+The philosophy behind gb stems from the idea that Go doesn’t have reproducible builds because of the import statement. The import statement drives go get, but import doesn’t contain sufficient information to identify which revision of a package should be fetched any time go get is called. The possibility that go get can fetch a different version of code for any given package at any time makes supporting the Go tooling in any reproducible solution complicated and tedious at best. You saw some of this tediousness with the large import paths when using godep.
+
+Gb doesn’t wrap the Go tooling, nor does it use GOPATH. Gb replaces the Go tooling workspace metaphor with a project-based approach. This has natively allowed vendoring without the need for rewriting import paths, which is mandated by go get and a GOPATH workspace.
+
+Gb projects differentiate between the code you write and the code your code depends on. The code your code depends on is called *vendored code*. A gb project makes a clear distinction between your code and vendored code.
+
+One of the best things about gb is that there’s no need for import path rewriting. Look at the import statements that are declared inside of main.go—nothing needs to change to reference the vendored dependencies.
+
+The gb tool will look inside the ```$PROJECT/vendor/src/``` directory for these imports if they can’t be located inside the $PROJECT/src/ directory first. The entire source code for the project is located within a single repo and directory on disk, split between the src/ and vendor/src/ subdirectories. This, in conjunction with no need to rewrite import paths and the freedom to place your project anywhere you wish on disk, makes gb a popular tool in the community to develop projects that require reproducible builds.
+
+One thing to note: a gb project is not compatible with the Go tooling, including go get. Since there’s no need for GOPATH, and the Go tooling doesn’t understand the structure of a gb project, it can’t be used to build, test, or get. Building and testing a gb project requires navigating to the $PROJECT directory and using the gb tool.
+
+Many of the same features that are supported by the Go tooling are supported in gb. Gb also has a plugin system to allow the community to extend support. One such plugin is called vendor, which provides conveniences to manage the dependencies in the ```$PROJECT/vendor/src/ directory```, something the Go tooling does not have today. To learn more about gb, check out the website: getgb.io.
+
+#### 3.8. SUMMARY
+
+- Packages are the basic unit of code organization in Go.
+- Your GOPATH determines on disk where Go source code is saved, compiled, and installed.
+- You can set your GOPATH for each different project, keeping all of your source and dependencies separate.
+- The go tool is your best friend when working from the command line.
+- You can use packages created by other people by using go get to fetch and install them in your GOPATH.
+- It’s easy to create packages for others to use if you host them on a public source code repository and follow a few simple rules.
+- Go was designed with code sharing as a central driving feature of the language.
+- It’s recommended that you use vendoring to manage dependencies.
+- There are several community-developed tools for dependency management such as godep, vendor, and gb.
+
+**Array intervals and Fundamentals**
+
+An array in Go is a fixed-length data type that contains a contiguous block of elements of the same type. This could be a built-in type such as integers and strings, or it can be a struct type. Arrays are valuable data structures because the memory is allocated sequentially. Having memory in a contiguous form can help to keep the memory you use stay loaded within CPU caches longer. Using index arithmetic, you can iterate through all the elements of an array quickly. The type information for the array provides the distance in memory you have to move to find each element. Since each element is of the same type and follows each other sequentially, moving through the array is consistent and fast.
+
+Once an array is declared, neither the type of data being stored nor its length can be changed. If you need more elements, you need to create a new array with the length needed and then copy the values from one array to the other.
+
+If the length is given as ..., Go will identify the length of the array based on the number of elements that are initialized.
+
+You can have an array of pointers, you use the * operator to access the value that each element pointer points to.
+
+An array is a value in Go. This means you can use it in an assignment operation. The variable name denotes the entire array and, therefore, an array can be assigned to other arrays of the same type.
+
+```
+-- 4.1. Declaring an array set to its zero value
+// Declare an integer array of five elements.
+var array [5]int
+
+-- 4.2. Declaring an array using an array literal
+// Declare an integer array of five elements.
+// Initialize each element with a specific value.
+array := [5]int{10, 20, 30, 40, 50}
+
+
+-- 4.3. Declaring an array with Go calculating size
+// Declare an integer array.
+// Initialize each element with a specific value.
+// Capacity is determined based on the number of values initialized.
+array := [...]int{10, 20, 30, 40, 50}
+
+- 4.4. Declaring an array initializing specific elements
+// Declare an integer array of five elements.
+// Initialize index 1 and 2 with specific values.
+// The rest of the elements contain their zero value.
+array := [5]int{1: 10, 2: 20}
+
+-- 4.5. Accessing array elements
+// Declare an integer array of five elements.
+// Initialize each element with a specific value.
+array := [5]int{10, 20, 30, 40, 50}
+
+
+// Change the value at index 2.
+array[2] = 35
+
+-- 4.6. Accessing array pointer elements
+// Declare an integer pointer array of five elements.
+// Initialize index 0 and 1 of the array with integer pointers.
+array := [5]*int{0: new(int), 1: new(int)}
+
+// Assign values to index 0 and 1.
+*array[0] = 10
+*array[1] = 20
+
+--  4.7. Assigning one array to another of the same type
+// Declare a string array of five elements.
+var array1 [5]string
+
+-- 4.8. Compiler error assigning arrays of different types
+// Declare a string array of four elements.
+var array1 [4]string
+
+// Declare a second string array of five elements.
+// Initialize the array with colors.
+array2 := [5]string{"Red", "Blue", "Green", "Yellow", "Pink"}
+
+// Copy the values from array2 into array1.
+array1 = array2
+
+Compiler Error:
+cannot use array2 (type [5]string) as type [4]string in assignment
+
+-- 4.9. Assigning one array of pointers to another
+// Declare a string pointer array of three elements.
+var array1 [3]*string
+
+// Declare a second string pointer array of three elements.
+// Initialize the array with string pointers.
+array2 := [3]*string{new(string), new(string), new(string)}
+
+// Add colors to each element
+*array2[0] = "Red"
+*array2[1] = "Blue"
+*array2[2] = "Green"
+
+// Copy the values from array2 into array1.
+array1 = array2
+
+-- 4.10. Declaring two-dimensional arrays
+// Declare a two dimensional integer array of four elements
+// by two elements.
+var array [4][2]int
+
+// Use an array literal to declare and initialize a two
+// dimensional integer array.
+array := [4][2]int{{10, 11}, {20, 21}, {30, 31}, {40, 41}}
+
+// Declare and initialize index 1 and 3 of the outer array.
+array := [4][2]int{1: {20, 21}, 3: {40, 41}}
+
+// Declare and initialize individual elements of the outer
+// and inner array.
+array := [4][2]int{1: {0: 20}, 3: {1: 41}}
+
+-- 4.11. Accessing elements of a two-dimensional array
+// Declare a two dimensional integer array of two elements.
+var array [2][2]int
+
+// Set integer values to each individual element.
+array[0][0] = 10
+array[0][1] = 20
+array[1][0] = 30
+array[1][1] = 40
+
+-- 4.12. Assigning multidimensional arrays of the same type
+// Declare two different two dimensional integer arrays.
+var array1 [2][2]int
+var array2 [2][2]int
+
+// Add integer values to each individual element.
+array2[0][0] = 10
+array2[0][1] = 20
+array2[1][0] = 30
+array2[1][1] = 40
+
+// Copy the values from array2 into array1.
+array1 = array2
+
+-- 4.13. Assigning multidimensional arrays by index
+// Copy index 1 of array1 into a new array of the same type.
+var array3 [2]int = array1[1]
+
+// Copy the integer found in index 1 of the outer array
+// and index 0 of the interior array into a new variable of
+// type integer.
+var value int = array1[1][0]
+
+-- 4.14. Passing a large array by value between functions
+// Declare an array of 8 megabytes.
+var array [1e6]int
+
+// Pass the array to the function foo.
+foo(array)
+
+// Function foo accepts an array of one million integers.
+func foo(array [1e6]int) {
+    ...
+}
+
+-- 4.15. Passing a large array by pointer between functions
+// Allocate an array of 8 megabytes.
+var array [1e6]int
+
+// Pass the address of the array to the function foo.
+foo(&array)
+
+// Function foo accepts a pointer to an array of one million integers.
+func foo(array *[1e6]int) {
+    ...
+}
+```
+
+**SLICE INTERNALS AND FUNDAMENTALS**
+
+A *slice* is a data structure that provides a way for you to work with and manage collections of data. Slices are built around the concept of dynamic arrays that can grow and shrink as you see fit. They’re flexible in terms of growth because they have their own built-in function called append, which can grow a slice quickly with efficiency. You can also reduce the size of a slice by slicing out a part of the underlying memory. Slices give you all the benefits of indexing, iteration, and garbage collection optimizations because the underlying memory is allocated in contiguous blocks.
+
+**Internals**
+
+```
+-- 4.16. Declaring a slice of strings by length
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+slice := make([]string, 5)
+
+-- 4.17. Declaring a slice of integers by length and capacity
+// Create a slice of integers.
+// Contains a length of 3 and has a capacity of 5 elements.
+slice := make([]int, 3, 5)
+
+-- 4.18. Compiler error setting capacity less than length
+// Create a slice of integers.
+// Make the length larger than the capacity.
+slice := make([]int, 5, 3)
+
+Compiler Error:
+len larger than cap in make([]int)
+
+-- 4.19. Declaring a slice with a slice literal
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+slice := []string{"Red", "Blue", "Green", "Yellow", "Pink"}
+
+// Create a slice of integers.
+// Contains a length and capacity of 3 elements.
+slice := []int{10, 20, 30}
+
+-- 4.21 Declaration differences between arrays and slices
+// Create an array of three integers.
+array := [3]int{10, 20, 30}
+
+// Create a slice of integers with a length and capacity of three.
+slice := []int{10, 20, 30}
+
+-- 4.22. Declaring a nil slice
+// Create a nil slice of integers.
+var slice []int
+
+-- 4.23. Declaring an empty slice
+// Use make to create an empty slice of integers.
+slice := make([]int, 0)
+
+// Use a slice literal to create an empty slice of integers.
+slice := []int{}
+```
+
+The three fields are a pointer to the underlying array, the length or the number of elements the slice has access to, and the capacity or the number of elements the slice has available for growth. The difference between length and capacity will make more sense in a bit.
+
+When you specify the length and capacity separately, you can create a slice with available capacity in the underlying array that you don’t have access to initially.
+
+ if you specify a value inside the [ ] operator, you’re creating an array. If you don’t specify a value, you’re creating a slice.
+
+Sometimes in your programs you may need to declare a nil slice. A nil slice is created by declaring a slice without any initialization. A nil slice is the most common way you create slices in Go. They can be used with many of the standard library and built-in functions that work with slices. 
+
+An empty slice contains a zero-element underlying array that allocates no storage. Empty slices are useful when you want to represent an empty collection, such as when a database query returns zero results 
+
+```
+-- 4.24. Declaring an array using an array literal
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Change the value of index 1.
+slice[1] = 25
+
+-- 4.25. Taking the slice of a slice
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+-- 4.26. How length and capacity are calculated
+For slice[i:j] with an underlying array of capacity k
+
+Length:   j - i
+Capacity: k - i
+
+-- 4.28. Potential consequence of making changes to a slice
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+// Change index 1 of newSlice.
+// Change index 2 of the original slice.
+newSlice[1] = 35
+
+-- 4.29. Runtime error showing index out of range
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+// Change index 3 of newSlice.
+// This element does not exist for newSlice.
+newSlice[3] = 45
+
+Runtime Exception:
+panic: runtime error: index out of range
+```
+
+Slices are called such because you can slice a portion of the underlying array to create a new slice.
+
+Having capacity is great, but useless if you can’t incorporate it into your slice’s length. Luckily, Go makes this easy when you use the built-in function append. 
+
+One of the advantages of using a slice over using an array is that you can grow the capacity of your slice as needed. Go takes care of all the operational details when you use the built-in function append.
+
+To use append, you need a source slice and a value that is to be appended. When your append call returns, it provides you a new slice with the changes. The append function will always increase the length of the new slice. The capacity, on the other hand, may or may not be affected, depending on the available capacity of the source slice.
+
+When there’s no available capacity in the underlying array for a slice, the append function will create a new underlying array, copy the existing values that are being referenced, and assign the new value.
+
+The append operation is clever when growing the capacity of the underlying array. Capacity is always doubled when the existing capacity of the slice is under 1,000 elements. Once the number of elements goes over 1,000, the capacity is grown by a factor of 1.25, or 25%. This growth algorithm may change in the language over time.
+
+The built-in function append will use any available capacity first. Once that capacity is reached, it will allocate a new underlying array. It’s easy to forget which slices are sharing the same underlying array. When this happens, making changes to a slice can result in random and odd-looking bugs. Suddenly changes appear on multiple slices out of nowhere.
+
+By having the option to set the capacity of a new slice to be the same as the length, you can force the first append operation to detach the new slice from the underlying array. Detaching the new slice from its original source array makes it safe to change.
+
+With the new slice now having its own underlying array, we’ve avoided potential problems. We can now continue to append fruit to our new slice without worrying if we’re changing fruit to other slices inappropriately. Also, allocating the new underlying array for the slice was easy and clean.
+
+There are two special built-in functions called len and cap that work with arrays, slices, and channels. For slices, the len function returns the length of the slice, and the cap function returns the capacity. 
+
+```
+-- 4.30. Using append to add an element to a slice
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+
+// Allocate a new element from capacity.
+// Assign the value of 60 to the new element.
+newSlice = append(newSlice, 60)
+
+-- 4.31. Using append to increase the length and capacity of a slice
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Append a new value to the slice.
+// Assign the value of 50 to the new element.
+newSlice := append(slice, 50)
+
+-- 4.32. Declaring a slice of string using a slice literal
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+source := []string{"Apple", "Orange", "Plum", "Banana", "Grape"}
+
+-- 4.33. Performing a three-index slice
+// Slice the third element and restrict the capacity.
+// Contains a length of 1 element and capacity of 2 elements.
+slice := source[2:3:4]
+
+-- 4.36. Benefits of setting length and capacity to be the same
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+source := []string{"Apple", "Orange", "Plum", "Banana", "Grape"}
+
+// Slice the third element and restrict the capacity.
+// Contains a length and capacity of 1 element.
+slice := source[2:3:3]
+
+// Append a new string to the slice.
+slice = append(slice, "Kiwi")
+
+-- 4.39. range provides a copy of each element
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Iterate over each element and display the value and addresses.
+for index, value := range slice {
+   fmt.Printf("Value: %d  Value-Addr: %X  ElemAddr: %X\n",
+       value, &value, &slice[index])
+}
+
+-- 4.40. Using the blank identifier to ignore the index value
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Iterate over each element and display each value.
+for _, value := range slice {
+    fmt.Printf("Value: %d\n", value)
+}
+
+-- 4.41. Iterating over a slice using a traditional for loop
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+
+// Iterate over each element starting at element 3.
+for index := 2; index < len(slice); index++ {
+    fmt.Printf("Index: %d  Value: %d\n", index, slice[index])
+}
+
+```
+
+**Multidimensional slices**
+
+```
+// Create a slice of a slice of integers.
+slice := [][]int{{10}, {100, 200}}
+```
+
+**Passing slices btw functions**
+
+Passing a slice between two functions requires nothing more than passing the slice by value. Since the size of a slice is small, it’s cheap to copy and pass between functions. Let’s create a large slice and pass that slice by value to our function called foo.
+
+Even with this simple multidimensional slice, there are a lot of layers and values involved. Passing a data structure like this between functions could seem complicated. But slices are cheap and passing them between functions is trivial.  This is the beauty of slices. You don’t need to pass pointers around and deal with complicated syntax. You just create copies of your slices, make the changes you need, and then pass a new copy back.
+
+```
+-- 4.43. Composing slices of slices
+// Create a slice of a slice of integers.
+slice := [][]int{{10}, {100, 200}}
+
+// Append the value of 20 to the first slice of integers.
+slice[0] = append(slice[0], 20)
+
+-- 4.44. Passing slices between functions
+// Allocate a slice of 1 million integers.
+slice := make([]int, 1e6)
+
+// Pass the slice to the function foo.
+slice = foo(slice)
+
+// Function foo accepts a slice of integers and returns the slice back.
+func foo(slice []int) []int {
+    ...
+    return slice
+}
+```
+
+**Map Internals and Fundamentals**
+
+A map is a data structure that provides you with an unordered collection of key/value pairs. You store values into the map based on a key. The strength of a map is its ability to retrieve data quickly based on the key. A key works like an index, pointing to the value you associate with that key.
+
+**Internals**
+
+Maps are collections, and you can iterate over them just like you do with arrays and slices. But maps are *unordered* collections, and there’s no way to predict the order in which the key/value pairs will be returned. Even if you store your key/value pairs in the same order, every iteration over a map could return a different order. This is because a map is implemented using a hash table.
+
+The map’s hash table contains a collection of buckets. When you’re storing, removing, or looking up a key/value pair, everything starts with selecting a bucket. This is performed by passing the key—specified in your map operation—to the map’s hash function. The purpose of the hash function is to generate an index that evenly distributes key/value pairs across all available buckets.
+
+The better the distribution, the quicker you can find your key/value pairs as the map grows. The strings are converted into a numeric value within the scope of the number of buckets we have available for storage. The numeric value is then used to select a bucket for storing or finding the specific key/value pair. In the case of a Go map, a portion of the generated hash key, specifically the *low order bits* (LOB), is used to select the bucket.
+
+There are two data structures that contain the data for the map. First, there’s an array with the top eight *high order bits* (HOB) from the same hash key that was used to select the bucket. This array distinguishes each individual key/value pair stored in the respective bucket. Second, there’s an array of bytes that stores the key/value pairs. The byte array packs all the keys and then all the values together for the respective bucket. The packing of the key/value pairs is implemented to minimize the memory required for each bucket.
+
+There are a lot of other low-level implementation details about maps that are outside the scope of this chapter. You don’t need to understand all the internals to learn how to create and use maps.  A map is an unordered collection of key/value pairs.
+
+```
+-- 4.45. Declaring a map using make
+// Create a map with a key of type string and a value of type int.
+dict := make(map[string]int)
+
+// Create a map with a key and value of type string.
+// Initialize the map with 2 key/value pairs.
+dict := map[string]string{"Red": "#da1337", "Orange": "#e95a22"}
+
+-- 4.46. Declaring an empty map using a map literal
+// Create a map using a slice of strings as the key.
+dict := map[[]string]int{}
+
+Compiler Exception:
+invalid map key type []string
+
+-- 4.47. Declaring a map that stores slices of strings
+// Create a map using a slice of strings as the value.
+dict := map[int][]string{}
+
+-- 4.48. Assigning values to a map
+// Create an empty map to store colors and their color codes.
+colors := map[string]string{}
+
+// Add the Red color code to the map.
+colors["Red"] = "#da1337"
+
+-- 4.49. Runtime error assigned to a nil map
+// Create a nil map by just declaring the map.
+var colors map[string]string
+
+// Add the Red color code to the map.
+colors["Red"] = "#da1337"
+
+Runtime Error:
+panic: runtime error: assignment to entry in nil map
+
+-- 4.50. Retrieving a value from a map and testing existence.
+// Retrieve the value for the key "Blue".
+value, exists := colors["Blue"]
+
+// Did this key exist?
+if exists {
+    fmt.Println(value)
+}
+
+-- 4.51. Retrieving a value from a map testing the value for existence
+// Retrieve the value for the key "Blue".
+value := colors["Blue"]
+
+// Did this key exist?
+if value != "" {
+    fmt.Println(value)
+}
+
+-- 4.52. Iterating over a map using for range
+// Create a map of colors and color hex codes.
+colors := map[string]string{
+    "AliceBlue":   "#f0f8ff",
+    "Coral":       "#ff7F50",
+    "DarkGray":    "#a9a9a9",
+    "ForestGreen": "#228b22",
+}
+
+// Display all the colors in the map.
+for key, value := range colors {
+    fmt.Printf("Key: %s  Value: %s\n", key, value)
+}
+
+-- 4.53. Removing an item from a map
+// Remove the key/value pair for the key "Coral".
+delete(colors, "Coral")
+
+// Display all the colors in the map.
+
+for key, value := range colors {
+    fmt.Printf("Key: %s  Value: %s\n", key, value)
+}
+
+-- 4.54. Passing maps between functions
+func main() {
+    // Create a map of colors and color hex codes.
+    colors := map[string]string{
+       "AliceBlue":   "#f0f8ff",
+       "Coral":       "#ff7F50",
+       "DarkGray":    "#a9a9a9",
+       "ForestGreen": "#228b22",
+    }
+
+    // Display all the colors in the map.
+    for key, value := range colors {
+        fmt.Printf("Key: %s  Value: %s\n", key, value)
+    }
+
+    // Call the function to remove the specified key.
+    removeColor(colors, "Coral")
+
+    // Display all the colors in the map.
+    for key, value := range colors {
+        fmt.Printf("Key: %s  Value: %s\n", key, value)
+    }
+}
+
+// removeColor removes keys from the specified map.
+func removeColor(colors map[string]string, key string) {
+    delete(colors, key)
+}
+```
+
+Using a map literal is the idiomatic way of creating a map. The initial length will be based on the number of key/value pairs you specify during initialization.
+
+The map key can be a value from any built-in or struct type as long as the value can be used in an expression with the == operator. Slices, functions, and struct types that contain slices can’t be used as map keys. This will produce a compiler error.
+
+Passing a map between two functions doesn’t make a copy of the map. In fact, you can pass a map to a function and make changes to the map, and the changes will be reflected by all references to the map.
+
+#### 4.4. SUMMARY
+
+- Arrays are the building blocks for both slices and maps.
+- Slices are the idiomatic way in Go you work with collections of data. Maps are the way you work with key/value pairs of data.
+- The built-in function make allows you to create slices and maps with initial length and capacity. Slice and map literals can be used as well and support setting initial values for use.
+- Slices have a capacity restriction, but can be extended using the built-in function append.
+- Maps don’t have a capacity or any restriction on growth.
+- The built-in function len can be used to retrieve the length of a slice or map.
+- The built-in function cap only works on slices.
+- Through the use of composition, you can create multidimensional arrays and slices. You can also create maps with values that are slices and other maps. A slice can’t be used as a map key.
+- Passing a slice or map to a function is cheap and doesn’t make a copy of the underlying data structure.
+
+
+**Go's type system**
+
+A value’s type provides the compiler with two pieces of information: first, how much memory to allocate—the *size of the value*—and second, what that memory represents. In the case of many of the built-in types, size and representation are part of the type’s name. A value of type int64 requires 8 bytes of memory (64 bits) and represents an integer value. A float32 requires 4 bytes of memory (32 bits) and represents an IEEE-754 binary floating-point number. A bool requires 1 byte of memory (8 bits) and represents a Boolean value of true or false.
+
+**User-Defined Types**
+
+Some types get their representation based on the architecture of the machine the code is built for. A value of type int, for example, can either have a size of 8 bytes (64 bits) or 4 bytes (32 bits), depending on the architecture. There are other architecture-specific types as well, such as all the reference types in Go.
+
+The value can be initialized with a specific value or it can be initialized to its zero value, which is the default value for that variable’s type. For numeric types, the zero value would be 0; for strings it would be empty; and for Booleans it would be false. In the case of a struct, the zero value would apply to all the different fields in the struct.
+
+This operator is the colon with the equals sign (:=). The short variable declaration operator serves two purposes in one operation: it both declares and initializes a variable. Based on the type information on the right side of the operator, the short variable declaration operator can determine the type for the variable.
+
+```
+-- 5.1. Declaration of a struct type
+01 // user defines a user in the program.
+02 type user struct {
+03    name       string
+04    email      string
+05    ext        int
+06    privileged bool
+07 }
+
+-- 5.2. Declaration of a variable of the struct type set to its zero value
+09 // Declare a variable of type user.
+10 var bill user
+
+-- 5.3. Declaration of a variable of the struct type using a struct literal
+12 // Declare a variable of type user and initialize all the fields.
+13 lisa := user{
+14     name:       "Lisa",
+15     email:      "lisa@email.com",
+16     ext:        123,
+17     privileged: true,
+18 }
+
+-- 5.4. Creating a struct type value using a struct literal
+13 user{
+14     name:       "Lisa",
+15     email:      "lisa@email.com",
+16     ext:        123,
+17     privileged: true,
+18 }
+
+-- 5.5. Creating a struct type value without declaring the field names
+12 // Declare a variable of type user.
+13 lisa := user{"Lisa", "lisa@email.com", 123, true}
+
+-- 5.6. Declaring fields based on other struct types
+20 // admin represents an admin user with privileges.
+21 type admin struct {
+22     person user
+23     level  string
+24 }
+
+-- 5.7. Using struct literals to create values for fields
+26 // Declare a variable of type admin.
+27 fred := admin{
+28     person: user{
+29         name:       "Lisa",
+30         email:      "lisa@email.com",
+31         ext:        123,
+32         privileged: true,
+33     },
+34     level: "super",
+35 }
+
+-- 5.8. Declaration of a new type based on an int64
+type Duration int64
+
+--  5.9. Compiler error assigning value of different types
+01 package main
+02
+03 type Duration int64
+04
+05 func main() {
+06     var dur Duration
+07     dur = int64(1000)
+08 }
+
+```
 
