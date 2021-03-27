@@ -1140,3 +1140,86 @@ Passing a map between two functions doesn’t make a copy of the map. In fact, y
 - The built-in function cap only works on slices.
 - Through the use of composition, you can create multidimensional arrays and slices. You can also create maps with values that are slices and other maps. A slice can’t be used as a map key.
 - Passing a slice or map to a function is cheap and doesn’t make a copy of the underlying data structure.
+
+
+**Go's type system**
+
+A value’s type provides the compiler with two pieces of information: first, how much memory to allocate—the *size of the value*—and second, what that memory represents. In the case of many of the built-in types, size and representation are part of the type’s name. A value of type int64 requires 8 bytes of memory (64 bits) and represents an integer value. A float32 requires 4 bytes of memory (32 bits) and represents an IEEE-754 binary floating-point number. A bool requires 1 byte of memory (8 bits) and represents a Boolean value of true or false.
+
+**User-Defined Types**
+
+Some types get their representation based on the architecture of the machine the code is built for. A value of type int, for example, can either have a size of 8 bytes (64 bits) or 4 bytes (32 bits), depending on the architecture. There are other architecture-specific types as well, such as all the reference types in Go.
+
+The value can be initialized with a specific value or it can be initialized to its zero value, which is the default value for that variable’s type. For numeric types, the zero value would be 0; for strings it would be empty; and for Booleans it would be false. In the case of a struct, the zero value would apply to all the different fields in the struct.
+
+This operator is the colon with the equals sign (:=). The short variable declaration operator serves two purposes in one operation: it both declares and initializes a variable. Based on the type information on the right side of the operator, the short variable declaration operator can determine the type for the variable.
+
+```
+-- 5.1. Declaration of a struct type
+01 // user defines a user in the program.
+02 type user struct {
+03    name       string
+04    email      string
+05    ext        int
+06    privileged bool
+07 }
+
+-- 5.2. Declaration of a variable of the struct type set to its zero value
+09 // Declare a variable of type user.
+10 var bill user
+
+-- 5.3. Declaration of a variable of the struct type using a struct literal
+12 // Declare a variable of type user and initialize all the fields.
+13 lisa := user{
+14     name:       "Lisa",
+15     email:      "lisa@email.com",
+16     ext:        123,
+17     privileged: true,
+18 }
+
+-- 5.4. Creating a struct type value using a struct literal
+13 user{
+14     name:       "Lisa",
+15     email:      "lisa@email.com",
+16     ext:        123,
+17     privileged: true,
+18 }
+
+-- 5.5. Creating a struct type value without declaring the field names
+12 // Declare a variable of type user.
+13 lisa := user{"Lisa", "lisa@email.com", 123, true}
+
+-- 5.6. Declaring fields based on other struct types
+20 // admin represents an admin user with privileges.
+21 type admin struct {
+22     person user
+23     level  string
+24 }
+
+-- 5.7. Using struct literals to create values for fields
+26 // Declare a variable of type admin.
+27 fred := admin{
+28     person: user{
+29         name:       "Lisa",
+30         email:      "lisa@email.com",
+31         ext:        123,
+32         privileged: true,
+33     },
+34     level: "super",
+35 }
+
+-- 5.8. Declaration of a new type based on an int64
+type Duration int64
+
+--  5.9. Compiler error assigning value of different types
+01 package main
+02
+03 type Duration int64
+04
+05 func main() {
+06     var dur Duration
+07     dur = int64(1000)
+08 }
+
+```
+
