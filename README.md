@@ -1221,5 +1221,213 @@ type Duration int64
 07     dur = int64(1000)
 08 }
 
+-- 5.10. Actual compiler error
+prog.go:7: cannot use int64(1000) (type int64) as type Duration in assignmen
 ```
+
+**Methods**
+
+ The parameter between the keyword func and the function name is called a *receiver* and binds the function to the specified type. When a function has a receiver, that function is called a *method*. There are two types of receivers in Go: *value* receivers and *pointer* receivers.
+
+- When you declare a method using a value receiver, the method will always be operating against a copy of the value used to make the method call.
+- When you call a method declared with a pointer receiver, the value used to make the call is shared with the method.You can also call methods that are declared with a pointer receiver using a value.
+- Once again, Go adjusts the value to comply with the method’s receiver to support the call.
+
+```
+-- 5.13. listing11.go: lines 09–20
+09 // user defines a user in the program.
+
+--  5.14. Declaration of a method with a value receiver
+10 type user struct {
+11     name  string
+12     email string
+13 }
+15 // notify implements a method with a value receiver.
+16 func (u user) notify() {
+17     fmt.Printf("Sending User Email To %s<%s>\n",
+18         u.name,
+19         u.email)
+20 }
+
+-- 5.15. listing11.go: lines 29–32
+29     // Values of type user can be used to call methods
+30     // declared with a value receiver.
+31     bill := user{"Bill", "bill@email.com"}
+
+-- 5.16. Calling a method from a variable
+32     bill.notify()
+
+--  5.17. listing11.go: lines 34–37
+34     // Pointers of type user can also be used to call methods
+35     // declared with a value receiver.
+36     lisa := &user{"Lisa", "lisa@email.com"}
+37     lisa.notify()
+
+-- 5.18. What Go is doing underneath the code
+(*lisa).notify()
+
+-- 5.19. declare methods with pointer receivers.
+22 // changeEmail implements a method with a pointer receiver.
+23 func (u *user) changeEmail(email string) {
+24     u.email = email
+25 }
+
+-- 5.21. listing11.go: line 31
+31     bill := user{"Bill", "bill@email.com"}
+
+39     // Values of type user can be used to call methods
+40     // declared with a pointer receiver.
+41     bill.changeEmail("bill@newdomain.com")
+
+36     lisa := &user{"Lisa", "lisa@email.com"}
+
+44     // Pointers of type user can be used to call methods
+45     // declared with a pointer receiver.
+46     lisa.changeEmail("lisa@newdomain.com")
+```
+
+Nature of Types
+
+- Build-in types
+
+Built-in types are the set of types that are provided by the language. We know them as the set of numeric, string, and Boolean types. These types have a primitive nature to them. Because of this, when adding or removing something from a value of one of these types, a new value should be created. Based on this, when passing values of these types to functions and methods, a copy of the value should be passed.
+
+```
+-- 5.23. golang.org/src/strings/strings.go
+620 func Trim(s string, cutset string) string {
+621     if s == "" || cutset == "" {
+622         return s
+623     }
+624     return TrimFunc(s, makeCutsetFunc(cutset))
+625 }
+
+--  5.24. golang.org/src/os/env.go
+38 func isShellSpecialVar(c uint8) bool {
+39     switch c {
+40     case '*', '#', '$', '@', '!', '?', '0', '1', '2', '3', '4', '5',
+                                                     '6', '7', '8', '9':
+41         return true
+42     }
+43     return false
+44 }
+```
+
+you see the Trim function, which comes from the strings package in the standard library. The Trim function is passed a string value to operate on and a string value with characters to find. It then returns a new string value that’s the result of the operation. The function operates on copies of the caller’s original string values and returns a copy of the new string value. Strings, just like integers, floats, and Booleans, are primitive data values and should be copied when passed in and out of functions or methods.
+
+- Reference types
+
+Reference types in Go are the set of slice, map, channel, interface, and function types. When you declare a variable from one of these types, the value that’s created is called a *header* value. Technically, a string is also a reference type value. All the different header values from the different reference types contain a pointer to an underlying data structure. Each reference type also contains a set of unique fields that are used to manage the underlying data structure. You never share reference type values because the header value is designed to be copied. The header value contains a pointer; therefore, you can pass a copy of any reference type value and share the underlying data structure intrinsically.
+
+```
+ -- 5.25. golang.org/src/net/ip.go Declaring a type like this is useful when you want to declare behavior around a built-in or reference type. The compiler will only let you declare methods for user-defined types that are named.
+ 32 type IP []byte
+ 
+ -- 5.26. golang.org/src/net/ip.go
+329 func (ip IP) MarshalText() ([]byte, error) {
+330     if len(ip) == 0 {
+331         return []byte(""), nil
+332     }
+333     if len(ip) != IPv4len && len(ip) != IPv6len {
+334         return nil, errors.New("invalid IP address")
+335     }
+336     return []byte(ip.String()), nil
+337 }
+
+-- 5.27. golang.org/src/net/ip.go:
+318 // ipEmptyString is like ip.String except that it returns
+319 // an empty string when ip is unset.
+320 func ipEmptyString(ip IP) string {
+321     if len(ip) == 0 {
+322         return ""
+323     }
+324     return ip.String()
+325 }
+```
+
+**Struct types**
+
+Struct types can represent data values that could have either a primitive or nonprimitive nature. When the decision is made that a struct type value should not be mutated when something needs to be added or removed from the value, then it should follow the guidelines for the built-in and reference types. Let’s start with looking at a struct implemented by the standard library that has a primitive nature.
+
+```
+-- 5.28. golang.org/src/time/time.go
+39 type Time struct {
+40     // sec gives the number of seconds elapsed since
+41     // January 1, year 1 00:00:00 UTC.
+42     sec int64
+43
+44     // nsec specifies a non-negative nanosecond
+45     // offset within the second named by Seconds.
+46     // It must be in the range [0, 999999999].
+47     nsec int32
+48
+49     // loc specifies the Location that should be used to
+50     // determine the minute, hour, month, day, and year
+51     // that correspond to this Time.
+52     // Only the zero Time has a nil Location.
+53     // In that case it is interpreted to mean UTC.
+54     loc *Location
+55 }
+
+ -- 5.29. golang.org/src/time/time.go
+781 func Now() Time {
+782     sec, nsec := now()
+783     return Time{sec + unixToInternal, nsec, Local}
+784 }
+
+-- 5.30. golang.org/src/time/time.go
+610 func (t Time) Add(d Duration) Time {
+611     t.sec += int64(d / 1e9)
+612     nsec := int32(t.nsec) + int32(d%1e9)
+613     if nsec >= 1e9 {
+614         t.sec++
+615         nsec -= 1e9
+616     } else if nsec < 0 {
+617         t.sec--
+618         nsec += 1e9
+619     }
+620     t.nsec = nsec
+621     return t
+622 }
+```
+
+how the standard library treats the Time type as having a primitive nature. The method is declared using a value receiver and returns a new Time value. The method is operating on its own copy of the caller’s Time value and returns a copy of its local Time value back to the caller. It’s up to the caller whether they want to replace their Time value with what’s returned or declare a new Time variable to hold the result.
+
+In most cases, struct types don’t exhibit a primitive nature, but a nonprimitive one. In these cases, adding or removing something from the value of the type should mutate the value. When this is the case, you want to use a pointer to share the value with the rest of the program that needs it. Let’s take a look at a struct type implemented by the standard library that has a nonprimitive nature.
+
+```
+ -- 5.31. golang.org/src/os/file_unix.go
+ 15 // File represents an open file descriptor.
+16 type File struct {
+17     *file
+18 }
+19
+20 // file is the real representation of *File.
+21 // The extra level of indirection ensures that no clients of os
+22 // can overwrite this data, which could cause the finalizer
+23 // to close the wrong file descriptor.
+24 type file struct {
+25     fd int
+26     name string
+27     dirinfo *dirInfo // nil unless directory being read
+28     nepipe int32 // number of consecutive EPIPE in Write
+29 }
+
+-- 5.32. golang.org/src/os/file.go:
+238 func Open(name string) (file *File, err error) {
+239     return OpenFile(name, O_RDONLY, 0)
+240 }
+
+-- 5.33. golang.org/src/os/file.go
+224 func (f *File) Chdir() error {
+225     if f == nil {
+226         return ErrInvalid
+227     }
+228     if e := syscall.Fchdir(f.fd); e != nil {
+229         return &PathError{"chdir", f.name, e}
+230     }
+231     return nil
+232 }
+```
+
+The decision to use a value or pointer receiver should not be based on whether the method is mutating the receiving value. The decision should be based on the nature of the type. One exception to this guideline is when you need the flexibility that value type receivers provide when working with interface values. In these cases, you may choose to use a value receiver even though the nature of the type is nonprimitive. It’s entirely based on the mechanics behind how interface values call methods for the values stored inside of them. In the next section, you’ll learn about what interface values are and the mechanics behind using them to call methods.
 
