@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // main is the entry point for the application.
 func main() {
 	//var x = [3]int
@@ -18,5 +20,106 @@ func main() {
 	//x[0] = [...]int{10, 20, 30}
 	//fmt.Println(x)
 
-	
+	//var x []int
+	//x = append(x, 10)
+	//fmt.Println(x)
+
+	//var x = []int{1, 2, 3}
+	//x = append(x, 4)
+	//fmt.Println(x)
+
+	//var x []int
+	//x = append(x, 5, 6, 7)
+	//fmt.Println(x)
+	//
+	//y := []int{20, 30, 40}
+	//x = append(x, y...)
+	//fmt.Println(x)
+
+	//Example 3-1. Understanding capacity
+	//var x []int
+	//fmt.Println(x, len(x), cap(x))
+	//x = append(x, 10)
+	//fmt.Println(x, len(x), cap(x))
+	//x = append(x, 20)
+	//fmt.Println(x, len(x), cap(x))
+	//x = append(x, 30)
+	//fmt.Println(x, len(x), cap(x))
+	//x = append(x, 40)
+	//fmt.Println(x, len(x), cap(x))
+	//x = append(x, 50)
+	//fmt.Println(x, len(x), cap(x))
+
+	//x := make([]int, 5)
+	//x = append(x, 10)
+	//fmt.Println(x)
+
+	//x := make([]int, 5, 10)
+	//fmt.Println(x)
+
+	//x := make([]int, 0, 10)
+	//x = append(x, 5,6,7,8)
+
+	//Example 3-3. Declaring a slice with default values
+	data := []int{2, 4, 6, 8}
+	fmt.Println(data)
+
+	//Example 3-4. Slicing slices
+	//x := []int{1, 2, 3, 4}
+	//y := x[:2]
+	//z := x[1:]
+	//d := x[1:3]
+	//e := x[:]
+	//fmt.Println("x:", x)
+	//fmt.Println("y:", y)
+	//fmt.Println("z:", z)
+	//fmt.Println("d:", d)
+	//fmt.Println("e:", e)
+
+
+	//Example 3-5. Slices with overlapping storage
+	//x := []int{1, 2, 3, 4}
+	//y := x[:2]
+	//z := x[1:]
+	//x[1] = 20
+	//y[0] = 10
+	//z[1] = 30
+	//fmt.Println("x:", x)
+	//fmt.Println("y:", y)
+	//fmt.Println("z:", z)
+
+	//Example 3-6. append makes overlapping slices more confusing
+	//x := []int{1, 2, 3, 4}
+	//y := x[:2]
+	//fmt.Println(cap(x), cap(y))
+	//y = append(y, 30)
+	//fmt.Println("x:", x)
+	//fmt.Println("y:", y)
+
+	//Example 3-7. Even more confusing slices
+	//x := make([]int, 0, 5)
+	//x = append(x, 1, 2, 3, 4)
+	//y := x[:2]
+	//z := x[2:]
+	//fmt.Println(cap(x), cap(y), cap(z))
+	//y = append(y, 30, 40, 50)
+	//x = append(x, 60)
+	//z = append(z, 70)
+	//fmt.Println("x:", x)
+	//fmt.Println("y:", y)
+	//fmt.Println("z:", z)
+
+	//Example 3-8. The full slice expression protects against append
+	x := make([]int, 0, 5)
+	y := x[:2:2]
+	z := x[2:4:4]
+	fmt.Println("x:", x)
+	fmt.Println("y:", y)
+	fmt.Println("z:", z)
+
+	//x := []int{1, 2, 3, 4}
+	//y := make([]int, 4)
+	//num := copy(y, x)
+	//fmt.Println(y, num)
+
 }
