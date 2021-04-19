@@ -1431,3 +1431,328 @@ In most cases, struct types don’t exhibit a primitive nature, but a nonprimiti
 
 The decision to use a value or pointer receiver should not be based on whether the method is mutating the receiving value. The decision should be based on the nature of the type. One exception to this guideline is when you need the flexibility that value type receivers provide when working with interface values. In these cases, you may choose to use a value receiver even though the nature of the type is nonprimitive. It’s entirely based on the mechanics behind how interface values call methods for the values stored inside of them. In the next section, you’ll learn about what interface values are and the mechanics behind using them to call methods.
 
+**Interfaces**
+
+Polymorphism is the ability to write code that can take on different behavior through the implementation of types. Once a type implements an interface, an entire world of functionality can be opened up to values of that type. The standard library is a great example of this. The io package provides an incredible set of interfaces and functions that make streaming data easy to apply to our code. Just by implementing two interfaces, we can take advantage of all the engineering behind the io package.
+
+**Implementation**
+
+Interfaces are types that just declare behavior. This behavior is never implemented by the interface type directly but instead by user-defined types via methods. When a user-defined type implements the set of methods declared by an interface type, values of the user-defined type can be assigned to values of the interface type. This assignment stores the value of the user-defined type into the interface value.
+
+**Method sets**
+
+If a method call is made against an interface value, the equivalent method for the stored user-defined value is executed. Since any user-defined type can implement any interface, method calls against an interface value are polymorphic in nature. The user-defined type in this relationship is often called a ***concrete type***, since interface values have no concrete behavior without the implementation of the stored user-defined value.
+
+There are rules around whether values or pointers of a user-defined type satisfy the implementation of an interface. Not all values are created equal. These rules come from the specification under the section called **method sets**. Before you begin to investigate the details of method sets, it helps to understand what interface type values look like and how user-defined type values are stored inside them.
+
+**Interface values** are two-word data structures. The first word contains a pointer to an internal table called an ***iTable***, which contains type information about the stored value. The iTable contains the type of value that has been stored and a list of methods associated with the value. The second word is a pointer to the **stored value**. The combination of type information and pointer binds the relationship between the two values.
+
+Method sets define the set of methods that are associated with values or pointers of a given type. The type of receiver used will determine whether a method is associated with a value, pointer, or both.
+
+ It says that a value of type T only has methods declared that have a value receiver, as part of its method set. But pointers of type T have methods declared with both value and pointer receivers, as part of its method set. Looking at these rules from the perspective of the value is confusing. 
+
+The question now is why the restriction? The answer comes from the fact that it’s not always possible to get the address of a value. This shows that it’s not always possible to get the address of a value. Let’s look at the method set rules again.
+
+```
+-- 5.42. Method sets as described by the specification
+Values                    Methods Receivers
+-----------------------------------------------
+    T                        (t T)
+   *T                        (t T) and (t *T)
+
+-- 5.43. Method sets from the perspective of the receiver type
+Methods Receivers         Values
+-----------------------------------------------
+   (t T)                     T and *T
+   (t *T)                    *T
+
+-- 5.44. listing36.go: lines 28–38
+28 func main() {
+29     // Create a value of type User and send a notification.
+30     u := user{"Bill", "bill@email.com"}
+31
+32     sendNotification(u)
+33
+34     // ./listing36.go:32: cannot use u (type user) as type
+35     //                     notifier in argument to sendNotification:
+36     //   user does not implement notifier
+37     //                          (notify method has pointer receiver)
+38 }
+
+-- 5.45. listing36.go: lines 28–35
+28 func main() {
+29     // Create a value of type User and send a notification.
+30     u := user{"Bill", "bill@email.com"}
+31
+32     sendNotification(&u)
+33
+34     // PASSED THE ADDRESS AND NO MORE ERROR.
+35 }
+
+-- 5.46. listing46.go
+01 // Sample program to show how you can't always get the
+02 // address of a value.
+03 package main
+04
+05 import "fmt"
+06
+07 // duration is a type with a base type of int.
+08 type duration int
+09
+10 // format pretty-prints the duration value.
+11 func (d *duration) pretty() string {
+12     return fmt.Sprintf("Duration: %d", *d)
+13 }
+14
+15 // main is the entry point for the application.
+16 func main() {
+17     duration(42).pretty()
+18
+19     // ./listing46.go:17: cannot call pointer method on duration(42)
+20     // ./listing46.go:17: cannot take the address of duration(42)
+21 }
+
+-- 5.47. Second look at the method set rules
+Values                    Methods Receivers
+-----------------------------------------------
+    T                        (t T)
+   *T                        (t T) and (t *T)
+
+  Methods Receivers         Values
+-----------------------------------------------
+   (t T)                     T and *T
+   (t *T)                    *T
+```
+
+**Polymorphism**
+
+```
+01 // Sample program to show how polymorphic behavior with interfaces.
+02 package main
+03
+04 import (
+05     "fmt"
+06 )
+07
+08 // notifier is an interface that defines notification
+09 // type behavior.
+10 type notifier interface {
+11     notify()
+12 }
+13
+14 // user defines a user in the program.
+15 type user struct {
+16     name  string
+17     email string
+18 }
+19
+20 // notify implements the notifier interface with a pointer receiver.
+21 func (u *user) notify() {
+22     fmt.Printf("Sending user email to %s<%s>\n",
+23         u.name,
+24         u.email)
+25 }
+26
+27 // admin defines a admin in the program.
+28 type admin struct {
+29     name  string
+30     email string
+31 }
+32
+33 // notify implements the notifier interface with a pointer receiver.
+34 func (a *admin) notify() {
+35     fmt.Printf("Sending admin email to %s<%s>\n",
+36         a.name,
+37         a.email)
+38 }
+39
+40 // main is the entry point for the application.
+41 func main() {
+42     // Create a user value and pass it to sendNotification.
+43     bill := user{"Bill", "bill@email.com"}
+44     sendNotification(&bill)
+45
+46     // Create an admin value and pass it to sendNotification.
+47     lisa := admin{"Lisa", "lisa@email.com"}
+48     sendNotification(&lisa)
+49 }
+50
+51 // sendNotification accepts values that implement the notifier
+52 // interface and sends notifications.
+
+53 func sendNotification(n notifier) {
+54     n.notify()
+55 }
+
+--  5.49. listing48.go: lines 40–49
+40 // main is the entry point for the application.
+41 func main() {
+42     // Create a user value and pass it to sendNotification.
+43     bill := user{"Bill", "bill@email.com"}
+44     sendNotification(&bill)
+45
+46     // Create an admin value and pass it to sendNotification.
+47     lisa := admin{"Lisa", "lisa@email.com"}
+48     sendNotification(&lisa)
+49 }
+```
+
+**Type Embedding**
+
+Go allows you to take existing types and both extend and change their behavior. This capability is important for code reuse and for changing the behavior of an existing type to suit a new need. This is accomplished through *type embedding*. It works by taking an existing type and declaring that type within the declaration of a new struct type. The type that is embedded is then called an *inner* type of the new *outer* type.
+
+Through inner type promotion, identifiers from the inner type are promoted up to the outer type. These promoted identifiers become part of the outer type as if they were declared explicitly by the type itself. The outer type is then composed of everything the inner type contains, and new fields and methods can be added. The outer type can also declare the same identifiers as the inner type and override any fields or methods it needs to. This is how an existing type can be both extended and changed.
+
+```
+-- 5.51. listing50.go
+09 // user defines a user in the program.
+10 type user struct {
+11     name  string
+12     email string
+13 }
+
+23 // admin represents an admin user with privileges.
+24 type admin struct {
+25     user  // Embedded Type
+26     level string
+27 }
+
+-- 5.52. listing50.go
+15 // notify implements a method that can be called via
+16 // a value of type user.
+17 func (u *user) notify() {
+18     fmt.Printf("Sending user email to %s<%s>\n",
+19     u.name,
+20     u.email)
+21 }
+
+-- 5.53. listing50.go
+30 func main() {
+31     // Create an admin user.
+32     ad := admin{
+33         user: user{
+34             name:  "ling huang",
+35             email: "linghuang@yahoo.com",
+36         },
+
+37         level: "super",
+38     }
+39
+
+-- 5.54. listing50.go
+40     // We can access the inner type's method directly.
+41     ad.user.notify()
+42
+-- 5.55. listing50.go
+43     // The inner type's method is promoted.
+44     ad.notify()
+45 }
+
+
+-- 5.57. listing56.go
+08 // notifier is an interface that defined notification
+09 // type behavior.
+10 type notifier interface {
+11     notify()
+12 }
+
+51 // sendNotification accepts values that implement the notifier
+52 // interface and sends notifications.
+53 func sendNotification(n notifier) {
+54     n.notify()
+55 }
+
+-- 5.58. listing56.go
+35 func main() {
+36     // Create an admin user.
+37     ad := admin{
+38         user: user{
+39             name:  "john smith",
+40             email: "john@yahoo.com",
+41         },
+42         level: "super",
+43     }
+44
+
+-- 5.59. Output for listing
+45     // Send the admin user a notification.
+46     // The embedded inner type's implementation of the
+47     // interface is "promoted" to the outer type.
+48     sendNotification(&ad)
+49 }
+
+Output:
+Sending user email to john smith<john@yahoo.com>
+
+20 // notify implements a method that can be called via
+21 // a value of type user.
+22 func (u *user) notify() {
+23     fmt.Printf("Sending user email to %s<%s>\n",
+24     u.name,
+25     u.email)
+26 }
+```
+
+Thanks to inner type promotion, the implementation of the interface by the inner type has been promoted up to the outer type. That means the outer type now implements the interface, thanks to the inner type’s implementation. When we run this sample program, we get the following output.
+
+```
+-- 5.61. listing60.go
+35 // notify implements a method that can be called via
+36 // a value of type admin.
+37 func (a *admin) notify() {
+38     fmt.Printf("Sending admin email to %s<%s>\n",
+39         a.name,
+40         a.email)
+41 }
+
+-- 5.62. listing60.go
+43 // main is the entry point for the application.
+44 func main() {
+45     // Create an admin user.
+46     ad := admin{
+47         user: user{
+48             name:  "john smith",
+49             email: "john@yahoo.com",
+
+50         },
+51         level: "super",
+52     }
+53
+54     // Send the admin user a notification.
+55     // The embedded inner type's implementation of the
+56     // interface is NOT "promoted" to the outer type.
+57     sendNotification(&ad)
+58
+59     // We can access the inner type's method directly.
+60     ad.user.notify()
+61
+62     // The inner type's method is NOT promoted.
+63     ad.notify()
+64 }
+```
+
+**Exporting and Unexporting Identifiers**
+
+When an identifier starts with a lowercase letter, the identifier is unexported or unknown to code outside the package. When an identifier starts with an uppercase letter, it’s exported or known to code outside the package. Let’s look at the code that imports this package.
+
+```
+13     // Create a variable of the unexported type and initialize
+14     // the value to 10.
+15     counter := counters.alertCounter(10)
+16
+17     // ./listing64.go:15: cannot refer to unexported name
+18     //                                         counters.alertCounter
+19     // ./listing64.go:15: undefined: counters.alertCounter
+```
+
+This is possible for two reasons. First, identifiers are exported or unexported, not values. Second, the short variable declaration operator is capable of inferring the type and creating a variable of the unexported type. You can never explicitly create a variable of an unexported type, but the short variable declaration operator can.
+
+#### SUMMARY
+
+- User-defined types can be declared using the keyword struct or by specifying an existing type.
+- Methods provide a way to add behavior to user-defined types.
+- Think of types as having one of two natures, primitive or non-primitive.
+- Interfaces are types that declare behavior and provide polymorphism.
+- Type embedding provides the ability to extend types without the need for inheritance.
+- Identifiers are either exported or unexported from packages.
+
