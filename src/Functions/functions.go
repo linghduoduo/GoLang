@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 )
 
 func div(numerator int, denominator int) int {
@@ -69,6 +73,63 @@ func divAndRemainder4(numerator, denominator int) (result int, remainder int, er
 	return
 }
 
+func add(i int, j int) int { return i + j }
+
+func sub(i int, j int) int { return i - j }
+
+func mul(i int, j int) int { return i * j }
+
+func div2(i int, j int) int { return i / j }
+
+var opMap = map[string]func(int, int) int{
+	"+": add,
+	"-": sub,
+	"*": mul,
+	"/": div2,
+}
+
+//Returning Functions from Functions
+func makeMult(base int) func(int) int {
+	return func(factor int) int {
+		return base * factor
+	}
+}
+func DoSomeInserts(ctx context.Context, db *sql.DB, value1, value2 string)(err error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+	return err
+	}
+	defer func() {
+	if err == nil {
+	err = tx.Commit()
+	}
+	if err != nil {
+	tx.Rollback()
+	}
+	}()
+	_, err = tx.ExecContext(ctx, "INSERT INTO FOO (val) values $1", value1)
+	if err != nil {
+	return err
+	}
+	// use tx to do more database inserts here
+	return nil
+}
+
+func getFile(name string) (*os.File, func(), error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, nil, err
+	}
+	return file, func() {
+		file.Close()
+	}, err
+}
+//f, closer, err := getFile(os.Args[1])
+//if err != nil {
+//log.Fatal(err)
+//}
+//defer closer()
+
 func main() {
 	result := div(5, 2)
 	fmt.Println(result)
@@ -105,4 +166,106 @@ func main() {
 
 	x, y, z := divAndRemainder4(5, 2)
 	fmt.Println(x, y, z)
+
+	expressions := [][]string{
+		[]string{"2", "+", "3"},
+		[]string{"2", "-", "3"},
+		[]string{"2", "*", "3"},
+		[]string{"2", "/", "3"},
+		[]string{"2", "%", "3"},
+		[]string{"two", "+", "three"},
+		[]string{"5"},
+	}
+
+	for _, expression := range expressions {
+		if len(expression) != 3 {
+			fmt.Println("invalid expression:", expression)
+			continue
+		}
+		//the strconv.Atoi function in the standard library to convert a string to an int.
+		p1, err := strconv.Atoi(expression[0])
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		op := expression[1]
+		opFunc, ok := opMap[op]
+		if !ok {
+			fmt.Println("unsupported operator:", op)
+			continue
+		}
+		p2, err := strconv.Atoi(expression[2])
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		result := opFunc(p1, p2)
+		fmt.Println(result)
+	}
+
+	for i := 0; i < 5; i++ {
+		func(j int) {
+			fmt.Println("printing", j, "from inside of an anonymous function")
+		}(i)
+	}
+
+	type Person struct {
+		FirstName string
+		LastName  string
+		Age       int
+	}
+
+	//Passing Functions as Parameters
+	people := []Person{
+		{"Pat", "Patterson", 37},
+		{"Tracy", "Bobbert", 23},
+		{"Fred", "Fredson", 18},
+	}
+	fmt.Println(people)
+
+	// sort by last name
+	sort.Slice(people, func(i int, j int) bool {
+		return people[i].LastName < people[j].LastName
+	})
+	fmt.Println(people)
+
+	// sort by age
+	sort.Slice(people, func(i int, j int) bool {
+		return people[i].Age < people[j].Age
+	})
+	fmt.Println(people)
+
+	//Returning Functions from Functions
+	twoBase := makeMult(2)
+	threeBase := makeMult(3)
+	for i := 0; i < 3; i++ {
+		fmt.Println(twoBase(i), threeBase(i))
+	}
+
+	//Go Is Call By Value
+
 }
+
+//defer
+//func main() {
+//	if len(os.Args) < 2 {
+//		log.Fatal("no file specified")
+//	}
+//	f, err := os.Open(os.Args[1])
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer f.Close()
+//	data := make([]byte, 2048)
+//	for {
+//		count, err := f.Read(data)
+//		os.Stdout.Write(data[:count])
+//		if err != nil {
+//			if err != io.EOF {
+//				log.Fatal(err)
+//			}
+//			break
+//		}
+//	}
+//}
+
