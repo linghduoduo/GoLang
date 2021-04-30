@@ -82,6 +82,77 @@ func (a Adder) AddTo(val int) int {
 	return a.start + val
 }
 
+type Employee struct {
+	Name         string
+	ID           string
+}
+
+func (e Employee) Description() string {
+	return fmt.Sprintf("%s (%s)", e.Name, e.ID)
+}
+
+type Manager struct {
+	Employee
+	Reports []Employee
+}
+
+func (m Manager) FindNewEmployees() []Employee {
+	// do business logic
+	return m.Reports
+}
+
+type Inner struct {
+	X int
+}
+
+type Outer struct {
+	Inner
+	X int
+}
+
+//type Inner struct {
+//	A int
+//}
+
+func (i Inner) IntPrinter(val int) string {
+	return fmt.Sprintf("Inner: %d", val)
+}
+
+//func (i Inner) Double() string {
+//	return i.IntPrinter(i.A * 2)
+//}
+//
+//type Outer struct {
+//	Inner
+//	S string
+//}
+//
+//func (o Outer) IntPrinter(val int) string {
+//	return fmt.Sprintf("Outer: %d", val)
+//}
+
+type LogicProvider struct {}
+
+//func (lp LogicProvider) Process(data string) string {
+//	// business logic
+//}
+
+//Interfaces specify what callers need. The client code defines the interface to specify what functionality it requires.
+//type Logic interface {
+//	Process(data string) string
+//}
+//
+//type Client struct{
+//	L Logic
+//}
+//
+//func(c Client) Program() {
+//	// get data from somewhere
+//	c.L.Process(data)
+//}
+
+//func process(r io.Reader) error
+
 func main() {
 
 	p := Person {
@@ -131,6 +202,67 @@ func main() {
 	//s = i                   // compilation error!
 	//s = Score(i)            // ok
 	//hs = HighScore(s)       // ok
-	
+
+	type MailCategory int
+
+	const (
+		Uncategorized MailCategory = iota
+		Personal
+		Spam
+		Social
+		Advertisements
+	)
+
+	m := Manager{
+		Employee: Employee{
+			Name:         "Bob Bobson",
+			ID:             "12345",
+		},
+		Reports: []Employee{},
+	}
+	fmt.Println(m.ID)            // prints 12345
+	fmt.Println(m.Description()) // prints Bob Bobson (12345)
+
+	o := Outer{
+		Inner: Inner{
+			X: 10,
+		},
+		X: 20,
+	}
+	fmt.Println(o.X)       // prints 20
+	fmt.Println(o.Inner.X) // prints 10
+
+	//c := Client{
+	//	L: LogicProvider{},
+	//}
+	//c.Program()
+
+	//r, err := os.Open(fileName)
+	//if err != nil {
+	//	return err
+	//}
+	//defer r.Close()
+	//return process(r)
+	//return nil
+
+	//r, err := os.Open(fileName)
+	//if err != nil {
+	//	return err
+	//}
+	//defer r.Close()
+	//gz, err = gzip.NewReader(r)
+	//if err != nil {
+	//	return err
+	//}
+	//defer gz.Close()
+	//return process(gz)
+
+	//Interfaces and nil
+	var s *string
+	fmt.Println(s == nil) // prints true
+	var i interface{}
+	fmt.Println(i == nil) // prints true
+	i = s
+	fmt.Println(i == nil) // prints false
 
 }
