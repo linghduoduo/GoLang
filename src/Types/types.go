@@ -454,10 +454,10 @@ func main() {
 	fmt.Println(i2 + 1)
 
 
-	l := LoggerAdapter(LogOutput)
-	ds := NewSimpleDataStore()
-	logic := NewSimpleLogic(l, ds)
-	cc := NewController(l, logic)
-	http.HandleFunc("/hello", cc.SayHello)
-	http.ListenAndServe(":8080", nil)
+	//l := LoggerAdapter(LogOutput)
+	//ds := NewSimpleDataStore()
+	//logic := NewSimpleLogic(l, ds)
+	//cc := NewController(l, logic)
+	//http.HandleFunc("/hello", cc.SayHello)
+	//http.ListenAndServe(":8080", nil)
 }
