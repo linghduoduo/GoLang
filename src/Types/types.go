@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -153,6 +155,154 @@ type LogicProvider struct {}
 
 //func process(r io.Reader) error
 
+
+// copyBuffer is the actual implementation of Copy and CopyBuffer.
+// if buf is nil, one is allocated.
+//func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
+//	// If the reader has a WriteTo method, use it to do the copy.
+//	// Avoids an allocation and a copy.
+//	if wt, ok := src.(WriterTo); ok {
+//		return wt.WriteTo(dst)
+//	}
+//	// Similarly, if the writer has a ReadFrom method, use it to do the copy.
+//	if rt, ok := dst.(ReaderFrom); ok {
+//		return rt.ReadFrom(src)
+//	}
+//	// function continues...
+//}
+
+//func ctxDriverStmtExec(ctx context.Context, si driver.Stmt,
+//	nvdargs []driver.NamedValue) (driver.Result, error) {
+//	if siCtx, is := si.(driver.StmtExecContext); is {
+//		return siCtx.ExecContext(ctx, nvdargs)
+//	}
+//	// fallback code is here
+//}
+
+//func walkTree(t *treeNode) (int, error) {
+//	switch val := t.val.(type) {
+//	case nil:
+//		return 0, errors.New("invalid expression")
+//	case number:
+//		// we know that t.val is of type number, so return the
+//		// int value
+//		return int(val), nil
+//	case operator:
+//		// we know that t.val is of type operator, so
+//		// find the values of the left and right children, then
+//		// call the process() method on operator to return the
+//		// result of processing their values.
+//		left, err := walkTree(t.lchild)
+//		if err != nil {
+//			return 0, err
+//		}
+//		right, err := walkTree(t.rchild)
+//		if err != nil {
+//			return 0, err
+//		}
+//		return val.process(left, right), nil
+//	default:
+//		// if a new treeVal type is defined, but walkTree wasn't updated
+//		// to process it, this detects it
+//		return 0, errors.New("unknown node type")
+//	}
+//}
+
+func LogOutput(message string) {
+	fmt.Println(message)
+}
+
+type SimpleDataStore struct {
+	userData map[string]string
+}
+
+func (sds SimpleDataStore) UserNameForID(userID string) (string, bool) {
+	name, ok := sds.userData[userID]
+	return name, ok
+}
+
+func NewSimpleDataStore() SimpleDataStore {
+	return SimpleDataStore{
+		userData: map[string]string{
+			"1": "Fred",
+			"2": "Mary",
+			"3": "Pat",
+		},
+	}
+}
+
+type DataStore interface {
+	UserNameForID(userID string) (string, bool)
+}
+
+type Logger interface {
+	Log(message string)
+}
+
+type LoggerAdapter func(message string)
+
+func (lg LoggerAdapter) Log(message string) {
+	lg(message)
+}
+
+type SimpleLogic struct {
+	l  Logger
+	ds DataStore
+}
+
+func (sl SimpleLogic) SayHello(userID string) (string, error) {
+	sl.l.Log("in SayHello for " + userID)
+	name, ok := sl.ds.UserNameForID(userID)
+	if !ok {
+		return "", errors.New("unknown user")
+	}
+	return "Hello, " + name, nil
+}
+
+func (sl SimpleLogic) SayGoodbye(userID string) (string, error) {
+	sl.l.Log("in SayGoodbye for " + userID)
+	name, ok := sl.ds.UserNameForID(userID)
+	if !ok {
+		return "", errors.New("unknown user")
+	}
+	return "Goodbye, " + name, nil
+}
+
+func NewSimpleLogic(l Logger, ds DataStore) SimpleLogic {
+	return SimpleLogic{
+		l:    l,
+		ds: ds,
+	}
+}
+
+type Logic interface {
+	SayHello(userID string) (string, error)
+}
+
+type Controller struct {
+	l     Logger
+	logic Logic
+}
+
+func (c Controller) HandleGreeting(w http.ResponseWriter, r *http.Request) {
+	c.l.Log("In SayHello")
+	userID := r.URL.Query().Get("user_id")
+	message, err := c.logic.SayHello(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Write([]byte(message))
+}
+
+func NewController(l Logger, logic Logic) Controller {
+	return Controller{
+		l:     l,
+		logic: logic,
+	}
+}
+
 func main() {
 
 	p := Person {
@@ -265,4 +415,49 @@ func main() {
 	i = s
 	fmt.Println(i == nil) // prints false
 
+	//One common use of the empty interface is as a placeholder for data of uncertain schema that’s read from an external source, like a JSON file
+	// one set of braces for the interface{} type,
+	// the other to instantiate an instance of the map
+	//data := map[string]interface{}{}
+	//contents, err := ioutil.ReadFile("testdata/sample.json")
+	//if err != nil {
+	//	return err
+	//}
+	//defer contents.Close()
+	//json.Unmarshal(contents, &data)
+	// the contents are now in the data map
+
+	//Another use of interface{} is as a way to store a value in a user-created data structure.
+	type LinkedList struct {
+		Value interface{}
+		Next    *LinkedList
+	}
+
+	//func (ll *LinkedList) Insert(pos int, val interface{}) *LinkedList {
+	//if ll == nil || pos == 0 {
+	//return &LinkedList{
+	//Value: val,
+	//Next:    ll,
+	//}
+	//}
+	//ll.Next = ll.Next.Insert(pos-1, val)
+	//return ll
+	//}
+	//
+	//Type Assertions and Type Switches
+
+	type MyInt int
+	var ii interface{}
+	var mine MyInt = 20
+	ii = mine
+	i2 := ii.(MyInt)
+	fmt.Println(i2 + 1)
+
+
+	l := LoggerAdapter(LogOutput)
+	ds := NewSimpleDataStore()
+	logic := NewSimpleLogic(l, ds)
+	cc := NewController(l, logic)
+	http.HandleFunc("/hello", cc.SayHello)
+	http.ListenAndServe(":8080", nil)
 }
