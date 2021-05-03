@@ -195,6 +195,19 @@ func fileChecker(name string) error {
 //	return doThing3(val3, val4)
 //}
 
+func doPanic(msg string) {
+	panic(msg)
+}
+
+func div60(i int) {
+	defer func() {
+		if v := recover(); v != nil {
+			fmt.Println(v)
+		}
+	}()
+	fmt.Println(60 / i)
+}
+
 func main() {
 	numerator := 20
 	denominator := 3
@@ -237,5 +250,11 @@ func main() {
 	//	fmt.Println("The database is broken:", err)
 	//	// process the codes
 	//}
+
+	//doPanic(os.Args[0])
+
+	for _, val := range []int{1, 2, 0, 6} {
+		div60(val)
+	}
 
 }
