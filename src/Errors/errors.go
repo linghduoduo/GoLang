@@ -31,18 +31,17 @@ func doubleEven(i int) (int, error) {
 //	return i * 2, nil
 //}
 
-type Status int
 
+//Errors Are Values
+type Status int
 const (
 	InvalidLogin Status = iota + 1
 	NotFound
 )
-
 //type StatusErr struct {
 //	Status    Status
 //	Message string
 //}
-
 //func (se StatusErr) Error() string {
 //	return se.Message
 //}
@@ -75,6 +74,7 @@ const (
 //	return genErr
 //}
 
+//Wrapping Errors
 //func fileChecker(name string) error {
 //	f, err := os.Open(name)
 //	if err != nil {
@@ -98,7 +98,8 @@ const (
 //func (se StatusError) Unwrap() error {
 //	return se.err
 //}
-//
+
+
 //func LoginAndGetData(uid, pwd, file string) ([]byte, error) {
 //	err := login(uid,pwd)
 //	if err != nil {
@@ -119,6 +120,7 @@ const (
 //	return data, nil
 //}
 
+//Is and As
 type MyErr struct {
 	Codes []int
 }
@@ -195,6 +197,7 @@ func fileChecker(name string) error {
 //	return doThing3(val3, val4)
 //}
 
+//Go generates a panic whenever there is a situation where the Go runtime is unable to figure out what should happen next. This could be due to a programming error (like an attempt to read past the end of a slice) or environmental problem (like running out of memory). As soon as a panic happens, the current function exits immediately and any defers attached to the current function start running. When those defers complete, the defers attached to the calling function run, and so on, until main is reached. The program then exits with a message and a stack trace.
 func doPanic(msg string) {
 	panic(msg)
 }
@@ -218,7 +221,7 @@ func main() {
 	}
 	fmt.Println(remainder, mod)
 
-
+	//Sentinel Errors - Sentinel errors are usually used to indicate that you cannot start or continue processing.
 	data := []byte("This is not a zip file")
 	notAZipFile := bytes.NewReader(data)
 	_, err = zip.NewReader(notAZipFile, int64(len(data)))
