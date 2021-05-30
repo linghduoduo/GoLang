@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
+//The Done Channel Pattern
 func searchData(s string, searchers []func(string) []string) []string {
 	done := make(chan struct{})
 	result := make(chan []string)
@@ -22,6 +24,7 @@ func searchData(s string, searchers []func(string) []string) []string {
 	return r
 }
 
+//Using a Cancel Function to Terminate a Goroutine
 func countTo(max int) (<-chan int, func()) {
 	ch := make(chan int)
 	done := make(chan struct{})
@@ -42,6 +45,7 @@ func countTo(max int) (<-chan int, func()) {
 	return ch, cancel
 }
 
+//When to Use Buffered and Unbuffered Channels
 func process(val int) int {
 	fmt.Println(val)
 	return val*2
@@ -63,6 +67,7 @@ func processChannel(ch chan int) []int {
 	return out
 }
 
+//Backpressure
 type PressureGauge struct {
 	ch chan struct{}
 }
@@ -93,22 +98,247 @@ func doThingThatShouldBeLimited() string {
 	return "done"
 }
 
-//func timeLimit() (int, error) {
-//	var result int
-//	var err error
-//	done := make(chan struct{})
+//Turning Off a case in a select
+// in and in2 are channels, done is a done channel.
+//for {
+//select {
+//case v, ok := <-in:
+//if !ok {
+//in = nil // the case will never succeed again!
+//continue
+//}
+//// process the v that was read from in
+//case v, ok := <-in2:
+//if !ok {
+//in2 = nil // the case will never succeed again!
+//continue
+//}
+//// process the v that was read from in2
+//case <-done:
+//return
+//}
+//}
+
+//How to Time Out Code
+func timeLimit() (int, error) {
+	var result int
+	var err error
+	done := make(chan struct{})
+	go func() {
+		result, err = fmt.Println("Do something")
+		close(done)
+	}()
+	select {
+	case <-done:
+		return result, err
+	case <-time.After(2 * time.Second):
+		return 0, errors.New("work timed out")
+	}
+}
+
+func processAndGather(in <-chan int, processor func(int) int, num int) []int {
+	out := make(chan int, num)
+	var wg sync.WaitGroup
+	wg.Add(num)
+	for i := 0; i < num; i++ {
+		go func() {
+			defer wg.Done()
+			for v := range in {
+				out <- processor(v)
+			}
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	var result []int
+	for v := range out {
+		result = append(result, v)
+	}
+	return result
+}
+
+
+type SlowComplicatedParser interface {
+	Parse(string) string
+}
+
+//Running Code Exactly Once
+var parser SlowComplicatedParser
+var once sync.Once
+
+//func Parse(dataToParse string) string {
+//	once.Do(func() {
+//		parser = initParser()
+//	})
+//	return parser.Parse(dataToParse)
+//}
+//
+//func initParser() SlowComplicatedParser {
+//	// do all sorts of setup and loading here
+//	fmt.Println("do all sorts of setup and loading here")
+//}
+
+
+//Putting Our Concurrent Tools Together
+//type processor struct {
+//	outA chan AOut
+//	outB chan BOut
+//	outC chan COut
+//	inC  chan CIn
+//	errs chan error
+//}
+//
+//func GatherAndProcess(ctx context.Context, data Input) (COut, error) {
+//	ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+//	defer cancel()
+//	p := processor{
+//		outA: make(chan AOut, 1),
+//		outB: make(chan BOut, 1),
+//		inC:  make(chan CIn, 1),
+//		outC: make(chan COut, 1),
+//		errs: make(chan error, 2),
+//	}
+//	p.launch(ctx, data)
+//	inputC, err := p.waitForAB(ctx)
+//	if err != nil {
+//		return COut{}, err
+//	}
+//	p.inC <- inputC
+//	out, err := p.waitForC(ctx)
+//	return out, err
+//}
+//
+//func (p *processor) launch(ctx context.Context, data Input) {
 //	go func() {
-//		result, err = doSomeWork()
-//		close(done)
+//		aOut, err := getResultA(ctx, data.A)
+//		if err != nil {
+//			p.errs <- err
+//			return
+//		}
+//		p.outA <- aOut
 //	}()
+//	go func() {
+//		bOut, err := getResultB(ctx, data.B)
+//		if err != nil {
+//			p.errs <- err
+//			return
+//		}
+//		p.outB <- bOut
+//	}()
+//	go func() {
+//		select {
+//		case <-ctx.Done():
+//			return
+//		case inputC := <-p.inC:
+//			cOut, err := getResultC(ctx, inputC)
+//			if err != nil {
+//				p.errs <- err
+//				return
+//			}
+//			p.outC <- cOut
+//		}
+//	}()
+//}
+//
+//func (p *processor) waitForAB(ctx context.Context) (CIn, error) {
+//	var inputC CIn
+//	count := 0
+//	for count < 2 {
+//		select {
+//		case a := <-p.outA:
+//			inputC.A = a
+//			count++
+//		case b := <-p.outB:
+//			inputC.B = b
+//			count++
+//		case err := <-p.errs:
+//			return CIn{}, err
+//		case <-ctx.Done():
+//			return CIn{}, ctx.Err()
+//		}
+//	}
+//	return inputC, nil
+//}
+//
+//func (p *processor) waitForC(ctx context.Context) (COut, error) {
 //	select {
-//	case <-done:
-//		return result, err
-//	case <-time.After(2 * time.Second):
-//		return 0, errors.New("work timed out")
+//	case out := <-p.outC:
+//		return out, nil
+//	case err := <-p.errs:
+//		return COut{}, err
+//	case <-ctx.Done():
+//		return COut{}, ctx.Err()
 //	}
 //}
 
+
+//When to Use Mutexes Instead of Channels
+func scoreboardManager(in <-chan func(map[string]int), done <-chan struct{}) {
+	scoreboard := map[string]int{}
+	for {
+		select {
+		case <-done:
+			return
+		case f := <-in:
+			f(scoreboard)
+		}
+	}
+}
+
+type ChannelScoreboardManager chan func(map[string]int)
+
+func NewChannelScoreboardManager() (ChannelScoreboardManager, func()) {
+	ch := make(ChannelScoreboardManager)
+	done := make(chan struct{})
+	go scoreboardManager(ch, done)
+	return ch, func() {
+		close(done)
+	}
+}
+
+func (csm ChannelScoreboardManager) Update(name string, val int) {
+	csm <- func(m map[string]int) {
+		m[name] = val
+	}
+}
+
+func (csm ChannelScoreboardManager) Read(name string) (int, bool) {
+	var out int
+	var ok bool
+	done := make(chan struct{})
+	csm <- func(m map[string]int) {
+		out, ok = m[name]
+		close(done)
+	}
+	<-done
+	return out, ok
+}
+
+type MutexScoreboardManager struct {
+	l          sync.RWMutex
+	scoreboard map[string]int
+}
+
+func NewMutexScoreboardManager() *MutexScoreboardManager {
+	return &MutexScoreboardManager{
+		scoreboard: map[string]int{},
+	}
+}
+
+func (msm *MutexScoreboardManager) Update(name string, val int) {
+	msm.l.Lock()
+	defer msm.l.Unlock()
+	msm.scoreboard[name] = val
+}
+
+func (msm *MutexScoreboardManager) Read(name string) (int, bool) {
+	msm.l.RLock()
+	defer msm.l.RUnlock()
+	val, ok := msm.scoreboard[name]
+	return val, ok
+}
 
 func main() {
 	ch1 := make(chan int)
@@ -184,5 +414,22 @@ func main() {
 	//		return
 	//	}
 	//}
+
+	//Using WaitGroups
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		fmt.Println("doThing1()")
+	}()
+	go func() {
+		defer wg.Done()
+		fmt.Println("doThing2()")
+	}()
+	go func() {
+		defer wg.Done()
+		fmt.Println("doThing3()")
+	}()
+	wg.Wait()
 
 }
