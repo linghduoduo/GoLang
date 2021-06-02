@@ -3,8 +3,8 @@ package tracker
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 type guidKey int
