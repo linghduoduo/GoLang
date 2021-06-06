@@ -7,13 +7,16 @@ import (
 	"time"
 )
 
+//The Basics of Testing
 func Test_addNumbers(t *testing.T) {
 	result := addNumbers(2,3)
+	//Reporting Test Failures
 	if result != 5 {
 		t.Error("incorrect result: expected 5, got", result)
 	}
 }
 
+//Setting Up and Tearing Down
 var testTime time.Time
 
 func TestMain(m *testing.M) {
@@ -33,6 +36,7 @@ func TestSecond(t *testing.T) {
 }
 
 
+//Example 13-1. Using t.Cleanup
 // createFile is a helper function called from multiple tests
 func createFile(t *testing.T) (string, error) {
 	f, err := os.Create("tempFile")
@@ -46,10 +50,10 @@ func createFile(t *testing.T) (string, error) {
 	return f.Name(), nil
 }
 
-func TestFileProcessing(t *testing.T) {
-	fName, err := createFile(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// do testing, don't worry about cleanup
-}
+//func TestFileProcessing(t *testing.T) {
+//	fName, err := createFile(t)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	// do testing, don't worry about cleanup
+//}
