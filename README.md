@@ -1,5 +1,11 @@
 
 ![GOlang](https://github.com/linghduoduo/GoLang/blob/main/images/Screen%20Shot%202021-06-06%20at%201.02.50%20PM.png)
+
+```
+go build src/hello/hello.go
+go run  src/hello/hello.go
+```
+
 ![GOLang](https://github.com/linghduoduo/GoLang/blob/main/images/Screen%20Shot%202021-04-16%20at%208.16.03%20PM.png)
 ![GO RunTime](https://github.com/linghduoduo/GoLang/blob/main/images/Screen%20Shot%202021-04-16%20at%2010.30.12%20PM.png)
 ![GO HashMap](https://github.com/linghduoduo/GoLang/blob/main/images/Screen%20Shot%202021-04-17%20at%208.58.54%20PM.png)
