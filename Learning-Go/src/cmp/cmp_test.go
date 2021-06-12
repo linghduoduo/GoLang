@@ -1,7 +1,7 @@
 package cmp
 
 import (
-"testing"
+	"testing"
 "github.com/google/go-cmp/cmp"
 )
 

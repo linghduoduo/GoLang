@@ -1,7 +1,7 @@
 package formatter
 
 import (
-"testing"
+	"testing"
 
 "github.com/google/go-cmp/cmp"
 )
